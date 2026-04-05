@@ -3,17 +3,25 @@ import type { AuditChecks, PageInfo } from "./types";
 export function buildPrompt(
   info: PageInfo,
   url: string,
-  checks: AuditChecks
+  checks: AuditChecks,
+  language: "en" | "es" = "en"
 ): string {
   const checkList = [
-    checks.accessibility && "accessibility",
-    checks.visualHierarchy && "visual hierarchy",
-    checks.uxClarity && "UX clarity",
+    checks.accessibility && (language === "es" ? "accesibilidad" : "accessibility"),
+    checks.visualHierarchy && (language === "es" ? "jerarquía visual" : "visual hierarchy"),
+    checks.uxClarity && (language === "es" ? "claridad UX" : "UX clarity"),
   ]
     .filter(Boolean)
     .join(", ");
 
+  const langInstruction =
+    language === "es"
+      ? "Respond ENTIRELY in Spanish. All fields (summary, problems titles, descriptions, improvements, quickWins, strengths) must be written in Spanish."
+      : "Respond entirely in English.";
+
   return `You are an expert UX auditor. Analyze this website data and return a JSON audit report.
+
+${langInstruction}
 
 URL: ${url}
 

@@ -56,4 +56,13 @@ export interface AuditResult {
 export interface AuditRequest {
   url: string;
   checks: AuditChecks;
+  language: "en" | "es";
+}
+
+export interface HistoryEntry {
+  id: string;
+  url: string;
+  score: number;
+  date: string;
+  audit: AuditResult;
 }

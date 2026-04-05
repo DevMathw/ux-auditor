@@ -4,6 +4,7 @@ import type { AuditImprovement } from "@/app/lib/types";
 
 interface Props {
   improvements: AuditImprovement[];
+  language: "en" | "es";
 }
 
 const impactClass: Record<string, string> = {
@@ -12,12 +13,21 @@ const impactClass: Record<string, string> = {
   low: "impact-low",
 };
 
-export default function ImprovementsList({ improvements }: Props) {
+const impactLabel = {
+  en: { high: "high impact", medium: "medium impact", low: "low impact" },
+  es: { high: "alto impacto", medium: "impacto medio", low: "bajo impacto" },
+};
+
+export default function ImprovementsList({ improvements, language }: Props) {
+  const t = {
+    title: language === "es" ? "Mejoras" : "Improvements",
+  };
+
   return (
     <div className="section-card">
       <div className="section-title">
         <span className="section-badge badge-success">{improvements.length}</span>
-        Improvements
+        {t.title}
       </div>
       {improvements.map((imp, i) => (
         <div key={i} className="priority-item">
@@ -27,7 +37,7 @@ export default function ImprovementsList({ improvements }: Props) {
             <div className="priority-desc">{imp.description}</div>
           </div>
           <span className={`priority-impact ${impactClass[imp.impact] ?? "impact-med"}`}>
-            {imp.impact} impact
+            {impactLabel[language][imp.impact]}
           </span>
         </div>
       ))}

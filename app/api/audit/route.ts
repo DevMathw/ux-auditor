@@ -13,7 +13,7 @@ async function fetchPageHTML(url: string): Promise<string> {
     const response = await fetch(url, {
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (compatible; UXAuditor/1.0; +https://uxauditor.app)",
+          "Mozilla/5.0 (compatible; UXAuditor/1.0)",
       },
       signal: AbortSignal.timeout(8000),
     });
@@ -27,13 +27,12 @@ async function fetchPageHTML(url: string): Promise<string> {
 export async function POST(req: NextRequest) {
   try {
     const body: AuditRequest = await req.json();
-    const { url, checks } = body;
+    const { url, checks, language = "en" } = body;
 
     if (!url || typeof url !== "string") {
       return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
     }
 
-    // Validate URL format
     let parsedUrl: URL;
     try {
       parsedUrl = new URL(url);
@@ -44,13 +43,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Fetch and parse page HTML server-side (no CORS issues)
     const html = await fetchPageHTML(parsedUrl.href);
     const pageInfo = extractPageInfo(
       html || "<html><head><title></title></head><body></body></html>"
     );
 
-    const prompt = buildPrompt(pageInfo, parsedUrl.href, checks);
+    const prompt = buildPrompt(pageInfo, parsedUrl.href, checks, language);
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
