@@ -198,6 +198,11 @@ export default function HomePage() {
             </div>
           </div>
 
+          <div style={{ display: "flex", gap: "10px", marginBottom: "1.5rem", flexWrap: "wrap" }}>
+            <button className="rerun-btn" onClick={reset}>{t.rerun}</button>
+            <ExportButton audit={audit} url={analyzedUrl} language={language} />
+          </div>
+
           <div className="sections-grid">
             <ProblemsList problems={audit.problems} language={language} />
             <ImprovementsList improvements={audit.improvements} language={language} />
@@ -209,10 +214,6 @@ export default function HomePage() {
             language={language}
           />
 
-          <div style={{ display: "flex", gap: "10px", marginTop: "1.5rem", flexWrap: "wrap" }}>
-            <button className="rerun-btn" onClick={reset}>{t.rerun}</button>
-            <ExportButton audit={audit} url={analyzedUrl} language={language} />
-          </div>
         </div>
       )}
     </div>

@@ -97,7 +97,7 @@ ${audit.strengths ? `<h2>${t.strengths}</h2><div class="callout">${audit.strengt
   };
 
   return (
-    <button className="rerun-btn" onClick={handleExport} style={{ marginTop: 0 }}>
+    <button className="rerun-btn" onClick={handleExport} style={{ }}>
       ↓ {language === "es" ? "Exportar PDF" : "Export PDF"}
     </button>
   );

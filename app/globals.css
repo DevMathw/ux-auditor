@@ -105,7 +105,7 @@ h1 em { font-style: italic; color: var(--accent); }
 .score-meta h2 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 400; margin-bottom: 0.35rem; }
 .score-desc { font-size: 14px; color: var(--muted); line-height: 1.55; }
 .sub-scores { display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap; }
-.sub-score { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 0.5rem 0.75rem; font-size: 12px; }
+.sub-score { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 0.5rem 0.75rem; font-size: 12px; display: flex; gap: 4px; }
 .sub-score-name { color: var(--muted); margin-bottom: 2px; }
 .sub-score-val { font-family: var(--font-mono); font-weight: 500; font-size: 14px; }
 
@@ -151,3 +151,7 @@ h1 em { font-style: italic; color: var(--accent); }
 .rerun-btn:hover { background: var(--surface2); }
 .error-banner { background: var(--danger-bg); border: 1px solid rgba(163,45,45,0.15); border-radius: 16px; padding: 1.25rem 1.5rem; color: var(--danger); font-size: 14px; margin-top: 1rem; }
 .prose-block { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+
+
+@media (max-width: 480px) { .input-row { flex-wrap: wrap; } .audit-btn { width: 100%; } }
