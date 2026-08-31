@@ -195,3 +195,37 @@ describe("robustez", () => {
     expect(report.totalApplicable).toBe(0);
   });
 });
+
+describe("documentación de reglas", () => {
+  it("toda regla registrada está documentada", async () => {
+    const { ALL_RULES } = await import("@/app/lib/rules");
+    const { RULE_DOCS } = await import("@/app/lib/rules/docs");
+    const undocumented = ALL_RULES.filter((r) => !RULE_DOCS[r.id]).map((r) => r.id);
+    // Si esto falla, alguien añadió una regla y olvidó documentarla: la página
+    // pública "How scoring works" habría quedado desincronizada del código.
+    expect(undocumented).toEqual([]);
+  });
+
+  it("no hay documentación huérfana", async () => {
+    const { ALL_RULES } = await import("@/app/lib/rules");
+    const { RULE_DOCS } = await import("@/app/lib/rules/docs");
+    const ids = new Set(ALL_RULES.map((r) => r.id));
+    expect(Object.keys(RULE_DOCS).filter((id) => !ids.has(id))).toEqual([]);
+  });
+
+  it("cada regla tiene identificador único", async () => {
+    const { ALL_RULES } = await import("@/app/lib/rules");
+    const ids = ALL_RULES.map((r) => r.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("los metadatos de cada regla son coherentes", async () => {
+    const { ALL_RULES } = await import("@/app/lib/rules");
+    for (const rule of ALL_RULES) {
+      expect(rule.maxPenalty).toBeGreaterThan(0);
+      expect(["critical", "high", "medium", "low"]).toContain(rule.severity);
+      expect(["low", "medium", "high"]).toContain(rule.effort);
+      expect(["accessibility", "hierarchy", "clarity"]).toContain(rule.category);
+    }
+  });
+});

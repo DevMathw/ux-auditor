@@ -3,6 +3,7 @@
 import type { AuditResult } from "@/app/lib/types";
 import { isQuickWin } from "@/app/lib/types";
 import { getScoreColor } from "@/app/lib/score";
+import { exportFilename, toJson, toMarkdown } from "@/app/lib/exporters";
 import { t as translate, type Language } from "@/app/lib/i18n";
 
 interface Props {
@@ -23,6 +24,18 @@ function esc(value: unknown): string {
 
 export default function ExportButton({ audit, url, language }: Props) {
   const t = translate(language);
+
+  /** Descarga un texto como fichero, sin pasar por el servidor. */
+  const download = (content: string, filename: string, mime: string) => {
+    const blob = new Blob([content], { type: `${mime};charset=utf-8` });
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = filename;
+    a.click();
+    // Liberar el objeto tras el clic evita retener el blob en memoria.
+    setTimeout(() => URL.revokeObjectURL(href), 1000);
+  };
 
   const handleExport = () => {
     const date = new Date().toLocaleDateString(language === "es" ? "es-CO" : "en-US", {
@@ -158,8 +171,22 @@ ${audit.strengths ? `<h2>${esc(t.strengths)}</h2><div class="callout">${esc(audi
   };
 
   return (
-    <button className="rerun-btn" onClick={handleExport}>
-      ↓ {t.exportPdf}
-    </button>
+    <div className="export-group" role="group" aria-label={t.exportGroupLabel}>
+      <button className="rerun-btn" onClick={handleExport}>
+        ↓ {t.exportPdf}
+      </button>
+      <button
+        className="rerun-btn"
+        onClick={() => download(toJson(audit, url), exportFilename(url, "json"), "application/json")}
+      >
+        ↓ {t.exportJson}
+      </button>
+      <button
+        className="rerun-btn"
+        onClick={() => download(toMarkdown(audit, url), exportFilename(url, "md"), "text/markdown")}
+      >
+        ↓ {t.exportMarkdown}
+      </button>
+    </div>
   );
 }

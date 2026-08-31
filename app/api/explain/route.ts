@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/app/lib/log";
 import { clientKey, rateLimit } from "@/app/lib/rateLimit";
 import { parseLanguage, safeText } from "@/app/lib/validation";
 
@@ -101,7 +102,7 @@ Severity: ${severity}`,
     if (err instanceof Anthropic.APIConnectionTimeoutError) {
       return NextResponse.json({ error: "model_timeout" }, { status: 504 });
     }
-    console.error("[explain] error:", err);
+    log.error({ event: "explain_failed", error: err });
     return NextResponse.json({ error: "explanation_failed" }, { status: 500 });
   }
 }

@@ -21,7 +21,20 @@ const dmMono = DM_Mono({
 });
 
 const description =
-  "Paste any URL and get a verifiable UX report: 22 automated accessibility, hierarchy and clarity checks with evidence, plus an AI read of the page copy.";
+  "27 automated accessibility, hierarchy and clarity checks with the evidence behind each one, measured on the rendered page, plus an AI that reviews the design.";
+
+/**
+ * Renderizado dinámico para TODAS las páginas.
+ *
+ * El nonce de CSP se genera por petición en proxy.ts, y Next sólo puede
+ * inyectarlo en el HTML si éste también se genera por petición. Una página
+ * prerenderizada serviría scripts inline sin nonce que la propia CSP bloquearía
+ * — la app quedaría rota en producción. Va en el layout y no en cada página
+ * para que añadir una ruta nueva no reintroduzca el fallo por olvido.
+ *
+ * Coste medido: TTFB de 12 ms a 21 ms. FCP y LCP sin cambios.
+ */
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

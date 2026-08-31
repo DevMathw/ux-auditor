@@ -2,22 +2,10 @@
 import type { NextConfig } from "next";
 
 /**
- * Cabeceras de seguridad básicas. La CSP permite estilos inline porque la app
- * los usa a fondo, y 'unsafe-eval' solo en desarrollo (lo necesita el HMR).
+ * La Content-Security-Policy NO está aquí: se emite en proxy.ts, que genera un
+ * nonce por petición. Estas cabeceras sí son estáticas y se aplican a todo,
+ * incluidas las rutas de API que el proxy no intercepta.
  */
-const csp = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'" + (process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""),
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self' data:",
-  "connect-src 'self'",
-  "frame-ancestors 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "object-src 'none'",
-].join("; ");
-
 const nextConfig: NextConfig = {
   // No anunciar la tecnología del servidor.
   poweredByHeader: false,
@@ -26,7 +14,6 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: [
-          { key: "Content-Security-Policy", value: csp },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

@@ -1,0 +1,110 @@
+{
+  "generatedBy": "scripts/self-audit.mts",
+  "generatedAt": "2026-08-31T20:36:48.715Z",
+  "target": "http://127.0.0.1:3210/",
+  "audit": {
+    "version": 2,
+    "overallScore": 97,
+    "scoreBreakdown": {
+      "accessibility": {
+        "category": "accessibility",
+        "score": 100,
+        "rulesApplicable": 8,
+        "rulesPassed": 8
+      },
+      "visualHierarchy": {
+        "category": "hierarchy",
+        "score": 100,
+        "rulesApplicable": 4,
+        "rulesPassed": 4
+      },
+      "uxClarity": {
+        "category": "clarity",
+        "score": 92,
+        "rulesApplicable": 6,
+        "rulesPassed": 5
+      }
+    },
+    "checksPassed": 17,
+    "checksApplicable": 18,
+    "confidence": "high",
+    "confidenceReason": null,
+    "rendered": false,
+    "findings": [
+      {
+        "id": "clarity-meta-description",
+        "category": "clarity",
+        "severity": "medium",
+        "impact": "medium",
+        "effort": "low",
+        "title": "Meta description is too long",
+        "description": "Descriptions beyond roughly 160 characters get truncated with an ellipsis, so the end of your sentence never reaches the reader.",
+        "fix": "Aim for 120-160 characters.",
+        "evidence": [
+          {
+            "detail": "184 caracteres (recomendado: 120-160)"
+          },
+          {
+            "snippet": "Paste any URL and get a verifiable UX report: 27 automated accessibility, hierarchy and clarity checks with evidence, me"
+          }
+        ],
+        "source": "rule"
+      },
+      {
+        "id": "ai-insight-1",
+        "category": "hierarchy",
+        "severity": "medium",
+        "impact": "medium",
+        "effort": "low",
+        "title": "Heading names the product, not the value",
+        "description": "The page's only heading, 'UX Auditor,' is a label rather than a promise; the actual benefit sits in the paragraph beneath it, so the first screen answers 'what is this' before 'why should I care.'",
+        "fix": "Replace the heading with a benefit statement like 'Get a verifiable UX report for any URL' and move 'UX Auditor' to a logo or eyebrow tag.",
+        "evidence": [
+          {
+            "detail": "Texto citado de la página",
+            "snippet": "UX Auditor"
+          }
+        ],
+        "source": "ai"
+      },
+      {
+        "id": "ai-insight-2",
+        "category": "clarity",
+        "severity": "low",
+        "impact": "low",
+        "effort": "low",
+        "title": "Value proposition is repeated almost verbatim",
+        "description": "The hero paragraph and the 'What you get' list both restate '27 automated checks... with evidence, measured on the rendered page,' which reads as padding instead of adding new information as the visitor scrolls.",
+        "fix": "Cut the duplicate sentence from the hero and use that space for a screenshot or sample finding instead.",
+        "evidence": [
+          {
+            "detail": "Texto citado de la página",
+            "snippet": "27 automated checks — markup, contrast, type size and tap targets — each with the evidence that triggered it"
+          }
+        ],
+        "source": "ai"
+      },
+      {
+        "id": "ai-insight-3",
+        "category": "hierarchy",
+        "severity": "low",
+        "impact": "low",
+        "effort": "low",
+        "title": "Language toggle competes with the primary action",
+        "description": "The EN/ES toggle sits directly beside the 'Run Audit' button in the same control row, splitting visual weight right where the eye should land on the one action that matters.",
+        "fix": "Move the language toggle to a header/footer utility area so 'Run Audit' is the only strong element in that row.",
+        "evidence": [
+          {
+            "detail": "Texto citado de la página",
+            "snippet": "Website URL, EN, ES, Run Audit appear together in one row"
+          }
+        ],
+        "source": "ai"
+      }
+    ],
+    "summary": "The page positions UX Auditor as a tool that turns any URL into a verifiable, evidence-backed UX report, and the scores confirm the markup itself is nearly flawless (100/100 on accessibility and hierarchy, 92/100 on clarity). The copy mostly supports that goal, but it leans on a single generic heading and repeats its core claim almost word-for-word instead of using the first screen to sharpen the promise.",
+    "quickWins": "Trimming the over-long meta description and cutting the near-duplicate '27 automated checks' sentence from the hero would tighten the message for almost no design effort.",
+    "strengths": "The trust-building details — '27 automated checks,' 'reproducible score,' 'nothing is stored on our servers' — give the tool credibility that generic marketing copy usually lacks.",
+    "aiEnabled": true
+  }
+}

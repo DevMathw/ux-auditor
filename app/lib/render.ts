@@ -1,19 +1,18 @@
-import { existsSync } from "node:fs";
 import type { Browser, Route } from "playwright-core";
+import {
+  isProvider,
+  launchBrowser,
+  resolveBrowserProvider,
+  type BrowserProvider,
+} from "./browserProvider";
 import { isPublicTarget } from "./fetchPage";
+import { log, safeHost } from "./log";
 
 /**
  * Capa de renderizado. Es OPCIONAL, igual que la capa de IA: si no hay
  * navegador disponible la auditoría sigue siendo completa sobre el marcado,
  * solo que sin las reglas visuales. Nada de esto puede tumbar una auditoría.
  */
-
-/**
- * El sandbox de Chrome es la principal defensa mientras ejecutamos JavaScript
- * de terceros. Solo se desactiva si el entorno lo exige (Lambda y contenedores
- * sin user namespaces), nunca por defecto.
- */
-const DISABLE_SANDBOX = process.env.PLAYWRIGHT_NO_SANDBOX === "1";
 
 const NAV_TIMEOUT_MS = 15_000;
 const SETTLE_MS = 700;
@@ -68,31 +67,12 @@ export interface VisualSnapshot {
 }
 
 /**
- * Playwright necesita un binario de Chromium. En desarrollo reutilizamos el
- * navegador que ya está instalado; en producción serverless se sustituye por
- * @sparticuz/chromium vía PLAYWRIGHT_EXECUTABLE_PATH.
+ * Qué capa de renderizado hay disponible en este runtime. Lo consulta la ruta
+ * de auditoría antes de intentar renderizar, y /api/health para poder decir la
+ * verdad sobre lo que el despliegue puede hacer realmente.
  */
-const BROWSER_CANDIDATES = [
-  process.env.PLAYWRIGHT_EXECUTABLE_PATH,
-  "C:/Program Files/Google/Chrome/Application/chrome.exe",
-  "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
-  "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
-  "/usr/bin/google-chrome",
-  "/usr/bin/chromium",
-  "/usr/bin/chromium-browser",
-  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-].filter(Boolean) as string[];
-
-let cachedPath: string | null | undefined;
-
-export function findBrowser(): string | null {
-  if (cachedPath !== undefined) return cachedPath;
-  cachedPath = BROWSER_CANDIDATES.find((p) => existsSync(p)) ?? null;
-  return cachedPath;
-}
-
-export function renderingAvailable(): boolean {
-  return findBrowser() !== null;
+export async function renderingAvailable(): Promise<boolean> {
+  return isProvider(await resolveBrowserProvider());
 }
 
 /**
@@ -281,24 +261,12 @@ async function settleAndEvaluate<T>(
 }
 
 export async function renderPage(url: string): Promise<VisualSnapshot | null> {
-  const executablePath = findBrowser();
-  if (!executablePath) return null;
+  const provider = await resolveBrowserProvider();
+  if (!isProvider(provider)) return null;
 
   let browser: Browser | null = null;
   try {
-    const { chromium } = await import("playwright-core");
-    browser = await chromium.launch({
-      executablePath,
-      headless: true,
-      args: [
-        "--disable-dev-shm-usage",
-        // La página analizada no debe poder hablar con nada del sistema.
-        "--disable-extensions",
-        "--disable-background-networking",
-        "--no-first-run",
-        ...(DISABLE_SANDBOX ? ["--no-sandbox"] : []),
-      ],
-    });
+    browser = await launchBrowser(provider as BrowserProvider);
 
     const context = await browser.newContext({
       viewport: DESKTOP,
@@ -364,7 +332,7 @@ export async function renderPage(url: string): Promise<VisualSnapshot | null> {
       screenshotMediaType: "image/jpeg",
     };
   } catch (err) {
-    console.error("[render] no disponible:", err instanceof Error ? err.message : err);
+    log.warn({ event: "render_unavailable", host: safeHost(url), reason: err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200) });
     return null;
   } finally {
     await browser?.close().catch(() => {});

@@ -23,6 +23,8 @@ const SummaryCards = dynamic(() => import("./SummaryCards"));
 const ExportButton = dynamic(() => import("./ExportButton"));
 const HistoryPanel = dynamic(() => import("./HistoryPanel"));
 const ScoreChart = dynamic(() => import("./ScoreChart"));
+const ComparePanel = dynamic(() => import("./ComparePanel"));
+const SelfAudit = dynamic(() => import("./SelfAudit"));
 
 type AppState = "idle" | "loading" | "done" | "error";
 
@@ -166,6 +168,8 @@ export default function AuditWorkspace() {
       {appState === "idle" && (
         <>
           {history.length === 0 && <EmptyState language={language} />}
+          {history.length === 0 && <SelfAudit language={language} />}
+          <ComparePanel history={history} language={language} />
           <ScoreChart history={history} language={language} />
           <HistoryPanel
             history={history}

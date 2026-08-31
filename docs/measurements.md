@@ -212,6 +212,72 @@ almost free; the JPEG is compressed at quality 62 and runs 14–112 KB.
 
 ---
 
+## Serverless rendering
+
+### What was actually broken
+
+The previous version of `render.ts` looked only for browser binaries on disk:
+Windows Chrome, `/usr/bin/chromium`, macOS Chrome. **None of those paths exist on
+Vercel's Amazon Linux 2023 runtime**, and `@sparticuz/chromium` was documented as
+the production path but never installed.
+
+The consequence: on the deployed site `renderingAvailable()` returned `false`,
+the 5 visual rules never ran, and no screenshot ever reached the model. The
+degradation was correct — nothing crashed — but the deployed product silently
+lacked its differentiating feature while the README claimed otherwise.
+
+### What was implemented
+
+`app/lib/browserProvider.ts` resolves a browser from three sources, in order:
+
+| Provider | Trigger | Cold start | Bundle cost |
+|---|---|---|---|
+| `remote` | `BROWSER_WS_ENDPOINT` set | none — the browser is already running | none |
+| `serverless` | `@sparticuz/chromium` importable | ~3-8 s to decompress and launch | ~50 MB packed |
+| `local` | a Chrome/Edge on disk | ~1 s | none |
+
+`@sparticuz/chromium` is deliberately **not** a hard dependency. It is 50 MB and
+only needed when deploying to a runtime without a browser; making it required
+would penalise every local install. It is imported through a non-literal
+specifier so neither TypeScript nor the bundler tries to resolve it at build
+time.
+
+### Verified
+
+- Local provider resolution and rendering: `{"kind":"local", …}`, 317 text
+  elements and 31 tap targets extracted from `news.ycombinator.com`
+- Graceful degradation when no browser resolves: the audit completes markup-only
+  rather than failing
+- `GET /api/health` reports `rendering.provider` and, when degraded,
+  `no_browser_found` or `serverless_package_missing`
+
+### Not verified — and why
+
+**The `serverless` path has not been exercised on Vercel.** Doing so requires
+deploying to an account this work had no access to. What can be stated from
+measured local numbers is the budget problem:
+
+| Stage | Measured locally |
+|---|---|
+| Chromium cold start | ~1 s (warm local Chrome) |
+| Render, both viewports + screenshot | 5-15 s |
+| AI interpretation | 11-15 s |
+| **Full audit, end to end** | **~28 s, up to 58 s cold** |
+
+`@sparticuz/chromium` adds roughly 3-8 s of decompression on a cold instance.
+Against Vercel's 60 s function ceiling that is **tight to the point of being
+unreliable** for a page that renders slowly.
+
+For that reason the recommended production configuration is the `remote`
+provider — a hosted browser reached over CDP via `BROWSER_WS_ENDPOINT`. It moves
+the cold start and the third-party JavaScript execution off our runtime
+entirely, at the cost of an external service.
+
+Anyone deploying this should check `/api/health` after the first deploy: it will
+say plainly whether the visual rules are running.
+
+---
+
 ## Rule engine calibration
 
 Run against five sites with all three categories enabled:
@@ -246,13 +312,48 @@ serve zero `<main>` elements (`grep -c '<main'` returns 0).
 
 ## Test suite
 
-`npm test` — 42 tests, ~6 s, no network.
+`npm test` — 246 tests, ~75 s, no network.
 
-- `tests/rules.test.ts` (26) — determinism, score bounds, applicability, and one
-  test per markup rule, including the three false positives found during
-  calibration so they cannot regress
-- `tests/visual-rules.test.ts` (16) — visual rules driven by synthetic
-  `VisualSnapshot` fixtures, so they run fast and offline
+**Domain and infrastructure (170)** — `ssrf` 35, `rules` 30, `run-audit` 22,
+`exporters` 16, `visual-rules` 16, `audit-cache` 15, `rate-limit` 15,
+`compare` 13, `csp` 8. The rule tests include the three false positives found
+during calibration so they cannot regress; the visual rules are driven by
+synthetic `VisualSnapshot` fixtures so they run offline.
+
+**Components (76)** — `AuditForm` 19, `FindingsList` 19, `AuditWorkspace` 18,
+`HistoryPanel` 13, `ExportButton` 7. Testing Library over jsdom, with `fetch`
+stubbed so the loading, error, cancellation and corrupt-history paths run
+against the real components.
+
+### End-to-end (14, Playwright)
+
+Real Chromium against the production build. `/api/audit` is intercepted, so CI
+needs no network and no API key — and, importantly, no bypass of the SSRF guard,
+which blocks `127.0.0.1` on purpose and would otherwise make a local fixture
+unauditable.
+
+Stability: three consecutive full runs, 14/14 each time.
+
+### Two bugs the tests found
+
+**1 — Dead URL normalisation (found by component tests).**
+`AuditForm` normalises `example.com` to `https://example.com` — but the input
+was `type="url"`, whose native constraint validation blocks submission before
+that code runs. The normalisation was **dead in practice**: a user typing a bare
+domain got a browser tooltip instead of an audit. Fixed by adding `noValidate`
+to the form, keeping `type="url"` for the mobile keyboard, and relying on the
+server's own validation, which returns translated messages.
+
+**2 — Cancel button ignored real clicks (found by E2E).**
+Clicking Cancel did nothing under a real trusted click, while `dispatchEvent`
+worked — which is why jsdom passed. Diagnosis took several steps: the click
+reached the button and bubbled to `document`, the node carried a valid React
+fiber with `onClick` as a function, and it was enabled and unobstructed. The
+cause was node reuse: React rendered submit and cancel as the same `<button>`
+position, so it kept one DOM node and mutated its `type` and handlers in place.
+Giving each branch its own `key` makes React create a fresh node, and the
+trusted click works. This is the clearest argument in the project for having
+E2E: no unit or component test could have caught it.
 
 The suite encodes the properties the product sells: the same HTML always
 produces the same report, a rule that does not apply never counts as passed, and

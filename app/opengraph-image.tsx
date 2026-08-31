@@ -34,7 +34,7 @@ export default function OpenGraphImage() {
           }}
         >
           <div style={{ width: 12, height: 12, borderRadius: 6, background: "#1D9E75" }} />
-          22 automated checks · evidence included
+          27 automated checks · evidence included
         </div>
         <div
           style={{
