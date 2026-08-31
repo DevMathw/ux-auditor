@@ -1,9 +1,58 @@
 import type { Metadata } from "next";
+import { DM_Mono, Fraunces } from "next/font/google";
+import { SITE_NAME, SITE_URL } from "./lib/site";
 import "./globals.css";
 
+// next/font auto-hospeda las fuentes en build: sin @import bloqueante y sin
+// peticiones a Google en tiempo de ejecución. Solo los pesos que se usan.
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  weight: ["300", "400"],
+  style: ["normal", "italic"],
+  display: "swap",
+  variable: "--font-display-loaded",
+});
+
+const dmMono = DM_Mono({
+  subsets: ["latin"],
+  weight: ["400"],
+  display: "swap",
+  variable: "--font-mono-loaded",
+});
+
+const description =
+  "Paste any URL and get a verifiable UX report: 22 automated accessibility, hierarchy and clarity checks with evidence, plus an AI read of the page copy.";
+
 export const metadata: Metadata = {
-  title: "UX Auditor",
-  description: "AI-powered UX analysis — visual hierarchy, accessibility, and clarity",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} — Verifiable UX audits for any URL`,
+    template: `%s · ${SITE_NAME}`,
+  },
+  description,
+  applicationName: SITE_NAME,
+  keywords: [
+    "UX audit",
+    "accessibility checker",
+    "WCAG",
+    "visual hierarchy",
+    "UX review",
+    "website analysis",
+  ],
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} — Verifiable UX audits for any URL`,
+    description,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} — Verifiable UX audits for any URL`,
+    description,
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({
@@ -12,7 +61,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    // El idioma real lo ajusta el cliente al cambiar de idioma en la interfaz.
+    <html lang="en" className={`${fraunces.variable} ${dmMono.variable}`}>
       <body>{children}</body>
     </html>
   );

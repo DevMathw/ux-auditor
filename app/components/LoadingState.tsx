@@ -1,35 +1,32 @@
 "use client";
 
+import { t as translate, type Language } from "@/app/lib/i18n";
+
 interface Props {
-  currentStep: number;
+  language: Language;
 }
 
-const STEPS = [
-  { icon: "↓", label: "Fetching page content" },
-  { icon: "⊙", label: "Parsing HTML structure" },
-  { icon: "✦", label: "Running AI analysis" },
-  { icon: "≡", label: "Generating report" },
-];
+const ICONS = ["↓", "⊙", "✦", "≡"];
 
-export default function LoadingState({ currentStep }: Props) {
+/**
+ * El trabajo real ocurre en el servidor en una sola petición, así que no
+ * podemos saber en qué paso va. En lugar de simularlo con temporizadores, la
+ * lista describe lo que se está haciendo y el spinner indica que sigue en curso.
+ */
+export default function LoadingState({ language }: Props) {
+  const t = translate(language);
+
   return (
-    <div className="loading-state">
+    <div className="loading-state" role="status" aria-live="polite">
       <div className="spinner" />
-      <div className="loading-text">Analyzing your website…</div>
+      <div className="loading-text">{t.loadingTitle}</div>
       <div className="loading-steps">
-        {STEPS.map((step, i) => {
-          const isDone = i < currentStep;
-          const isActive = i === currentStep;
-          return (
-            <div
-              key={i}
-              className={`step-item ${isDone ? "done" : ""} ${isActive ? "active" : ""}`}
-            >
-              <span className="step-icon">{isDone ? "✓" : step.icon}</span>
-              {step.label}
-            </div>
-          );
-        })}
+        {t.steps.map((label, i) => (
+          <div key={label} className="step-item active">
+            <span className="step-icon">{ICONS[i]}</span>
+            {label}
+          </div>
+        ))}
       </div>
     </div>
   );

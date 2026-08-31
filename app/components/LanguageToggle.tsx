@@ -1,26 +1,42 @@
 "use client";
 
+import { LANGUAGES, type Language } from "@/app/lib/i18n";
+
 interface Props {
-  language: "en" | "es";
-  onChange: (lang: "en" | "es") => void;
+  language: Language;
+  onChange: (lang: Language) => void;
 }
+
+const NAMES: Record<Language, string> = {
+  en: "English",
+  es: "Español",
+};
 
 export default function LanguageToggle({ language, onChange }: Props) {
   return (
-    <div style={{
-      display: "inline-flex",
-      border: "1px solid var(--border2)",
-      borderRadius: "10px",
-      overflow: "hidden",
-      fontFamily: "var(--font-mono)",
-      fontSize: "12px",
-    }}>
-      {(["en", "es"] as const).map((lang) => (
+    <div
+      role="group"
+      aria-label="Language"
+      style={{
+        display: "inline-flex",
+        border: "1px solid var(--border2)",
+        borderRadius: "10px",
+        overflow: "hidden",
+        fontFamily: "var(--font-mono)",
+        fontSize: "12px",
+      }}
+    >
+      {LANGUAGES.map((lang) => (
         <button
           key={lang}
+          type="button"
           onClick={() => onChange(lang)}
+          aria-pressed={language === lang}
+          aria-label={NAMES[lang]}
           style={{
             padding: "6px 14px",
+            minWidth: "48px",
+            minHeight: "44px",
             border: "none",
             cursor: "pointer",
             fontFamily: "var(--font-mono)",
@@ -32,7 +48,7 @@ export default function LanguageToggle({ language, onChange }: Props) {
             letterSpacing: "0.04em",
           }}
         >
-          {lang === "en" ? "EN" : "ES"}
+          {lang.toUpperCase()}
         </button>
       ))}
     </div>

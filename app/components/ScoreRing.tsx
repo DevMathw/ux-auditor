@@ -3,21 +3,14 @@
 interface Props {
   score: number;
   color: string;
+  /** Etiqueta corta bajo el número. El rating lo muestra el <h2> contiguo. */
+  caption: string;
 }
 
-export default function ScoreRing({ score, color }: Props) {
+export default function ScoreRing({ score, color, caption }: Props) {
   const r = 46;
   const circ = 2 * Math.PI * r;
   const dash = (score / 100) * circ;
-
-  const rating =
-    score >= 80
-      ? "Excellent"
-      : score >= 65
-      ? "Good"
-      : score >= 45
-      ? "Needs Work"
-      : "Critical";
 
   return (
     <div className="relative w-[110px] h-[110px] shrink-0">
@@ -25,6 +18,8 @@ export default function ScoreRing({ score, color }: Props) {
         viewBox="0 0 110 110"
         className="w-[110px] h-[110px] -rotate-90"
         xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+        focusable="false"
       >
         <circle
           cx="55"
@@ -54,7 +49,7 @@ export default function ScoreRing({ score, color }: Props) {
           {score}
         </span>
         <span className="text-[10px] text-[var(--muted)] mt-0.5 tracking-wide font-mono">
-          {rating}
+          {caption}
         </span>
       </div>
     </div>

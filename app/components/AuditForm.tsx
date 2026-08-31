@@ -2,37 +2,24 @@
 
 import { useState } from "react";
 import type { AuditChecks } from "@/app/lib/types";
+import { t as translate, type Language } from "@/app/lib/i18n";
 import LanguageToggle from "./LanguageToggle";
 
 interface Props {
-  onSubmit: (url: string, checks: AuditChecks, language: "en" | "es") => void;
+  onSubmit: (url: string, checks: AuditChecks, language: Language) => void;
+  onCancel: () => void;
   loading: boolean;
-  language: "en" | "es";
-  onLanguageChange: (lang: "en" | "es") => void;
+  language: Language;
+  onLanguageChange: (lang: Language) => void;
 }
 
-const labels = {
-  en: {
-    placeholder: "https://example.com",
-    urlLabel: "Website URL",
-    btn: "Run Audit",
-    loading: "Analyzing…",
-    accessibility: "Accessibility",
-    visualHierarchy: "Visual Hierarchy",
-    uxClarity: "UX Clarity",
-  },
-  es: {
-    placeholder: "https://ejemplo.com",
-    urlLabel: "URL del sitio web",
-    btn: "Analizar",
-    loading: "Analizando…",
-    accessibility: "Accesibilidad",
-    visualHierarchy: "Jerarquía Visual",
-    uxClarity: "Claridad UX",
-  },
-};
-
-export default function AuditForm({ onSubmit, loading, language, onLanguageChange }: Props) {
+export default function AuditForm({
+  onSubmit,
+  onCancel,
+  loading,
+  language,
+  onLanguageChange,
+}: Props) {
   const [url, setUrl] = useState("");
   const [checks, setChecks] = useState<AuditChecks>({
     accessibility: true,
@@ -40,10 +27,12 @@ export default function AuditForm({ onSubmit, loading, language, onLanguageChang
     uxClarity: true,
   });
 
-  const t = labels[language];
+  const t = translate(language);
+  const noAreaSelected = !checks.accessibility && !checks.visualHierarchy && !checks.uxClarity;
 
-  const handleSubmit = () => {
-    if (!url.trim()) return;
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!url.trim() || loading || noAreaSelected) return;
     let finalUrl = url.trim();
     if (!/^https?:\/\//i.test(finalUrl)) finalUrl = "https://" + finalUrl;
     onSubmit(finalUrl, checks, language);
@@ -53,7 +42,7 @@ export default function AuditForm({ onSubmit, loading, language, onLanguageChang
     setChecks((prev) => ({ ...prev, [key]: !prev[key] }));
 
   return (
-    <div className="input-card">
+    <form className="input-card" onSubmit={handleSubmit}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
         <label className="input-label" htmlFor="url-field" style={{ marginBottom: 0 }}>
           {t.urlLabel}
@@ -68,24 +57,26 @@ export default function AuditForm({ onSubmit, loading, language, onLanguageChang
           placeholder={t.placeholder}
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           autoComplete="off"
           spellCheck={false}
+          disabled={loading}
         />
-        <button
-          className="audit-btn"
-          onClick={handleSubmit}
-          disabled={loading || !url.trim()}
-        >
-          {loading ? t.loading : (
-            <>
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <path d="M8 1L15 8L8 15M1 8H15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              {t.btn}
-            </>
-          )}
-        </button>
+        {loading ? (
+          <button type="button" className="audit-btn" onClick={onCancel}>
+            {t.cancel}
+          </button>
+        ) : (
+          <button
+            type="submit"
+            className="audit-btn"
+            disabled={!url.trim() || noAreaSelected}
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M8 1L15 8L8 15M1 8H15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {t.runAudit}
+          </button>
+        )}
       </div>
       <div className="options-row">
         {([
@@ -98,11 +89,12 @@ export default function AuditForm({ onSubmit, loading, language, onLanguageChang
               type="checkbox"
               checked={checks[key]}
               onChange={() => toggle(key)}
+              disabled={loading}
             />
             {label}
           </label>
         ))}
       </div>
-    </div>
+    </form>
   );
 }

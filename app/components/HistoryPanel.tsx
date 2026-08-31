@@ -2,27 +2,18 @@
 
 import type { HistoryEntry } from "@/app/lib/types";
 import { deleteHistoryEntry, clearHistory } from "@/app/lib/history";
+import { getScoreColor } from "@/app/lib/score";
+import { LOCALES, t as translate, type Language } from "@/app/lib/i18n";
 
 interface Props {
   history: HistoryEntry[];
-  language: "en" | "es";
+  language: Language;
   onSelect: (entry: HistoryEntry) => void;
   onHistoryChange: () => void;
 }
 
-function getScoreColor(score: number) {
-  if (score >= 70) return "#1D9E75";
-  if (score >= 45) return "#BA7517";
-  return "#A32D2D";
-}
-
 export default function HistoryPanel({ history, language, onSelect, onHistoryChange }: Props) {
-  const t = {
-    title: language === "es" ? "Historial" : "History",
-    empty: language === "es" ? "Aún no hay auditorías guardadas." : "No audits saved yet.",
-    clear: language === "es" ? "Limpiar todo" : "Clear all",
-    load: language === "es" ? "Cargar" : "Load",
-  };
+  const t = translate(language);
 
   if (history.length === 0) return null;
 
@@ -31,7 +22,7 @@ export default function HistoryPanel({ history, language, onSelect, onHistoryCha
       <div className="section-title" style={{ justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <span className="section-badge badge-info">{history.length}</span>
-          {t.title}
+          {t.historyTitle}
         </div>
         <button
           onClick={() => { clearHistory(); onHistoryChange(); }}
@@ -40,7 +31,7 @@ export default function HistoryPanel({ history, language, onSelect, onHistoryCha
             fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--muted)",
           }}
         >
-          {t.clear}
+          {t.clearAll}
         </button>
       </div>
 
@@ -73,7 +64,7 @@ export default function HistoryPanel({ history, language, onSelect, onHistoryCha
                 {entry.url.replace(/^https?:\/\//, "")}
               </div>
               <div style={{ fontSize: "11px", color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
-                {new Date(entry.date).toLocaleDateString(language === "es" ? "es-CO" : "en-US", {
+                {new Date(entry.date).toLocaleDateString(LOCALES[language], {
                   month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
                 })}
               </div>
@@ -91,6 +82,7 @@ export default function HistoryPanel({ history, language, onSelect, onHistoryCha
               </button>
               <button
                 onClick={() => { deleteHistoryEntry(entry.id); onHistoryChange(); }}
+                aria-label={`${t.deleteEntry}: ${entry.url}`}
                 style={{
                   background: "none", border: "1px solid var(--border2)",
                   borderRadius: "6px", padding: "4px 8px", fontSize: "11px",

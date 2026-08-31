@@ -1,18 +1,17 @@
 "use client";
 
+import { t as translate, type Language } from "@/app/lib/i18n";
+
 interface Props {
   quickWins?: string;
   strengths?: string;
-  language: "en" | "es";
+  language: Language;
 }
 
 export default function SummaryCards({ quickWins, strengths, language }: Props) {
-  if (!quickWins && !strengths) return null;
+  if (!quickWins?.trim() && !strengths?.trim()) return null;
 
-  const t = {
-    quickWins: language === "es" ? "Victorias Rápidas" : "Quick Wins",
-    strengths: language === "es" ? "Fortalezas" : "Strengths",
-  };
+  const t = translate(language);
 
   return (
     <div className="sections-grid">

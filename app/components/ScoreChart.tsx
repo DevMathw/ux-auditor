@@ -1,16 +1,12 @@
 "use client";
 
 import type { HistoryEntry } from "@/app/lib/types";
+import { SCORE_COLORS, getScoreColor } from "@/app/lib/score";
+import { LOCALES, t as translate, type Language } from "@/app/lib/i18n";
 
 interface Props {
   history: HistoryEntry[];
-  language: "en" | "es";
-}
-
-function getScoreColor(score: number) {
-  if (score >= 70) return "#1D9E75";
-  if (score >= 45) return "#BA7517";
-  return "#A32D2D";
+  language: Language;
 }
 
 export default function ScoreChart({ history, language }: Props) {
@@ -37,18 +33,17 @@ export default function ScoreChart({ history, language }: Props) {
 
   const areaD = `${pathD} L ${toX(sorted.length - 1).toFixed(1)} ${h - padB} L ${padL} ${h - padB} Z`;
 
-  const t = {
-    title: language === "es" ? "Progreso histórico" : "Score history",
-    noData: language === "es" ? "Agrega más auditorías para ver el progreso." : "Add more audits to see progress.",
-  };
+  const t = translate(language);
 
   return (
     <div className="section-card" style={{ marginBottom: "1.25rem" }}>
-      <div className="section-title">{t.title}</div>
+      <div className="section-title">{t.chartTitle}</div>
       <svg
         viewBox={`0 0 ${w} ${h}`}
         style={{ width: "100%", height: "auto", overflow: "visible" }}
         xmlns="http://www.w3.org/2000/svg"
+        role="img"
+        aria-label={t.chartTitle}
       >
         {/* Grid lines */}
         {[25, 50, 75, 100].map((v) => (
@@ -68,10 +63,10 @@ export default function ScoreChart({ history, language }: Props) {
         ))}
 
         {/* Area fill */}
-        <path d={areaD} fill="#1D9E75" opacity="0.08" />
+        <path d={areaD} fill={SCORE_COLORS.good} opacity="0.08" />
 
         {/* Line */}
-        <path d={pathD} fill="none" stroke="#1D9E75" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={pathD} fill="none" stroke={SCORE_COLORS.good} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 
         {/* Dots + labels */}
         {sorted.map((entry, i) => (
@@ -89,7 +84,7 @@ export default function ScoreChart({ history, language }: Props) {
               fontSize="8" textAnchor="middle"
               fill="var(--muted)" fontFamily="var(--font-mono)"
             >
-              {new Date(entry.date).toLocaleDateString(language === "es" ? "es-CO" : "en-US", { month: "short", day: "numeric" })}
+              {new Date(entry.date).toLocaleDateString(LOCALES[language], { month: "short", day: "numeric" })}
             </text>
           </g>
         ))}
