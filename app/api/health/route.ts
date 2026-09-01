@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { isProvider, resolveBrowserProvider } from "@/app/lib/browserProvider";
 import { ALL_RULES } from "@/app/lib/rules";
+import { getStorageDegradeReason, getStore } from "@/app/lib/storage";
 
 /**
- * Estado real de las tres capas en ESTE despliegue.
+ * Estado real de las cuatro capas en ESTE despliegue.
  *
- * Existe porque las capas de renderizado e IA son opcionales y degradan en
- * silencio: sin esto no hay forma de saber, mirando el sitio desplegado, si las
- * reglas visuales están corriendo o no. Cualquier afirmación del README sobre
- * producción debe poder comprobarse aquí.
+ * Existe porque las capas de renderizado, IA y almacenamiento son opcionales y
+ * degradan en silencio: sin esto no hay forma de saber, mirando el sitio
+ * desplegado, si las reglas visuales corren o si los informes persisten.
+ * Cualquier afirmación del README sobre producción debe poder comprobarse aquí.
  *
  * No revela secretos: sólo si una credencial está presente, nunca su valor.
  */
@@ -17,6 +18,8 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const provider = await resolveBrowserProvider();
   const renderingUp = isProvider(provider);
+  const store = await getStore();
+  const storageReason = await getStorageDegradeReason();
 
   const layers = {
     rules: {
@@ -37,6 +40,16 @@ export async function GET() {
     ai: {
       status: process.env.ANTHROPIC_API_KEY ? ("up" as const) : ("degraded" as const),
       model: "claude-sonnet-5",
+    },
+    storage: {
+      // "degraded" significa que el historial y los enlaces compartidos no
+      // sobreviven a un reinicio. La aplicación funciona igual.
+      status: store.kind === "sqlite" ? ("up" as const) : ("degraded" as const),
+      driver: store.kind,
+      // Un nombre de fichero, nunca una ruta absoluta.
+      location: store.location,
+      reason: storageReason,
+      persistent: store.kind === "sqlite",
     },
   };
 

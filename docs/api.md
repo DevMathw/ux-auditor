@@ -1,9 +1,15 @@
 # API
 
-Four endpoints. The three public ones need no authentication; `/api/usage` is
-token-gated because operating cost is business data. See
-[commercial-readiness.md](./commercial-readiness.md) for what would change
-before this could be offered as a public API with keys and quotas.
+Nine endpoints in three groups:
+
+- **Public** — `/api/audit`, `/api/explain`, `/api/health`. No authentication.
+- **Session** — `/api/audits` and its share sub-resource. Authenticated by the
+  anonymous session cookie, which is issued automatically on the first audit.
+- **Operator** — `/api/usage`, `/api/keys`, `/api/errors`. Gated by a single
+  `ADMIN_TOKEN`; without it set, all three return `404`.
+
+`/api/audit` also accepts an **optional API key**, which replaces the per-IP
+rate limit with that key's own quota.
 
 Base URL is the deployment origin. All request and response bodies are JSON.
 
@@ -37,6 +43,13 @@ the deterministic rules, and optionally adds the AI interpretation layer.
 | `language` | `"en"` \| `"es"` | no | `"en"` | Language of the report text |
 | `ai` | boolean | no | `true` | `false` skips the interpretation layer. The score is identical either way |
 | `visual` | boolean | no | `true` | `false` skips rendering, so the 5 visual rules do not apply |
+
+### Authentication (optional)
+
+Send a key as `X-API-Key: uxa_…` or `Authorization: Bearer uxa_…`. With a valid
+key the per-IP rate limit does not apply; the key's quota does instead, and one
+unit is consumed **before** the audit runs, so a cancelled request still counts.
+Without a key everything works exactly as before, limited by IP.
 
 ### Response `200`
 
@@ -82,7 +95,8 @@ the deterministic rules, and optionally adds the AI interpretation layer.
     ]
   },
   "analyzedUrl": "https://example.com/",
-  "cached": false
+  "cached": false,
+  "auditId": "dd245044-5e3a-4b49-b1c0-05c2e5975b6f"
 }
 ```
 
@@ -99,6 +113,13 @@ Fields worth understanding:
   as evidence, and **never affect the score**.
 - **`cached`** — the response came from the content-hash cache. Same page
   content, same report, no model call.
+- **`auditId`** — the id under which the server stored this report, needed to
+  share it. It is `null` when storage was unavailable: the report is still
+  delivered in full, it just cannot be shared.
+
+The first audit of a session sets an `uxa_session` cookie — a random UUID,
+`HttpOnly`, `SameSite=Lax`, 30 days. It carries no personal data and exists only
+so `/api/audits` can show you your own reports and let you delete them.
 
 ### Errors
 
@@ -108,11 +129,14 @@ Fields worth understanding:
 | `400` | `invalid_protocol` | Not `http:` or `https:` |
 | `400` | `invalid_body` | Body was not valid JSON |
 | `400` | `fetch_blocked` | The target resolves to a private, loopback, link-local or cloud-metadata address |
+| `401` | `invalid_api_key` | The key does not exist or is malformed |
+| `401` | `revoked_api_key` | The key was revoked |
 | `413` | `payload_too_large` | Request body over 8 KB |
 | `422` | `fetch_unreachable` | DNS failure, timeout, or a non-2xx response from the target |
 | `422` | `fetch_not_html` | The target returned something other than HTML |
 | `422` | `fetch_too_large` | The page exceeds the 1.5 MB download cap |
 | `429` | `rate_limited` | Includes `retryAfter` (seconds) and a `Retry-After` header |
+| `429` | `quota_exceeded` | The API key used up its quota. Includes `quota` and `retryAfter` |
 | `500` | `analysis_failed` | Unexpected server error |
 
 **A failing AI layer or a failing browser is not an error.** Both degrade: the
@@ -123,12 +147,14 @@ report is always delivered if the page could be fetched.
 
 | Limit | Value | Where |
 |---|---|---|
-| Rate limit | 10 requests / 5 min per IP | `app/lib/rateLimit.ts` |
+| Rate limit (anonymous) | 10 requests / 5 min per IP | `app/lib/rateLimit.ts` |
+| Quota (with API key) | per key, 24 h window, 100 by default | `app/lib/apiKeys.ts` |
 | Request body | 8 KB | route handler |
 | Page download | 1.5 MB | `app/lib/fetchPage.ts` |
 | Redirects followed | 3, each re-validated | `app/lib/fetchPage.ts` |
 | Function duration | 60 s | `maxDuration` |
 | Cache TTL | 30 min, keyed on content hash | `app/lib/auditCache.ts` |
+| Stored audits per session | 50 returned by `/api/audits` | `app/api/audits/route.ts` |
 
 The rate limiter is in-memory and per-instance. Behind multiple instances each
 keeps its own count — it is a cost control, not a security boundary.
@@ -205,7 +231,7 @@ report generates several explanation requests.
 
 ## `GET /api/health`
 
-Reports which of the three layers this deployment can actually run. It exists
+Reports which of the four layers this deployment can actually run. It exists
 because the rendering and AI layers degrade silently: without this there is no
 way to tell from outside whether the visual rules are running.
 
@@ -217,7 +243,8 @@ way to tell from outside whether the visual rules are running.
   "layers": {
     "rules":     { "status": "up", "count": 27, "active": 27 },
     "rendering": { "status": "up", "provider": "local", "reason": null },
-    "ai":        { "status": "up", "model": "claude-sonnet-5" }
+    "ai":        { "status": "up", "model": "claude-sonnet-5" },
+    "storage":   { "status": "up", "driver": "sqlite", "location": "ux-auditor.db", "reason": null, "persistent": true }
   },
   "timestamp": "2026-08-31T15:48:00.178Z"
 }
@@ -230,9 +257,11 @@ way to tell from outside whether the visual rules are running.
 | `rendering.provider` | `remote`, `serverless` or `local` |
 | `rendering.reason` | When degraded: `no_browser_found` or `serverless_package_missing` |
 | `ai.status` | `up` when `ANTHROPIC_API_KEY` is set. The key itself is never exposed |
+| `storage.driver` | `sqlite` or `memory` — see the storage section below for `reason` |
+| `storage.persistent` | Whether history and share links survive a restart |
 
 `status` is `"ok"` whenever the deterministic engine can run. A degraded
-rendering or AI layer is **not** a failure — the app is designed to work with
+rendering, AI or storage layer is **not** a failure — the app is designed to work with
 any subset of layers. It returns `503` only if the rule engine itself is
 unavailable.
 
@@ -245,12 +274,14 @@ Returns `Cache-Control: no-store`.
 What it costs to run the AI layer on this instance. Answers "how much does this
 cost to operate?" with measured numbers rather than estimates.
 
-**Gated by a token.** Without `USAGE_TOKEN` set the endpoint returns `404` — an
-endpoint that does not exist is safer than one accidentally left open. With it
-set, requests need `Authorization: Bearer <token>` or they get `401`.
+**Gated by `ADMIN_TOKEN`,** shared with `/api/keys` and `/api/errors`. Without it
+set the endpoint returns `404` — an endpoint that does not exist is safer than
+one accidentally left open. With it set, requests need
+`Authorization: Bearer <token>` or they get `401`. The comparison is
+timing-safe, so a wrong token leaks nothing about the right one.
 
 ```bash
-curl -H "Authorization: Bearer $USAGE_TOKEN" https://your-deploy/api/usage
+curl -H "Authorization: Bearer $ADMIN_TOKEN" https://your-deploy/api/usage
 ```
 
 ### Response `200`
@@ -275,6 +306,158 @@ curl -H "Authorization: Bearer $USAGE_TOKEN" https://your-deploy/api/usage
 number that makes a free tier viable. `pricing` is included so the cost figure
 can be checked rather than taken on faith.
 
-Totals live in memory and reset on deploy. A persistent store is the obvious
-next step, and is listed in
-[commercial-readiness.md](./commercial-readiness.md).
+Totals live in memory and reset on deploy. They are deliberately not stored:
+they are an operational counter, not user data, and persisting them would mean
+writing on every audit for a number nobody reads between deploys.
+
+---
+
+## `GET /api/health` — the storage layer
+
+`/api/health` also reports storage, alongside rules, rendering and AI:
+
+```json
+"storage": {
+  "status": "up",
+  "driver": "sqlite",
+  "location": "ux-auditor.db",
+  "reason": null,
+  "persistent": true
+}
+```
+
+| `reason` | Meaning |
+|---|---|
+| `null` | SQLite opened normally |
+| `forced_memory` | `STORAGE_DRIVER=memory` was set |
+| `serverless_ephemeral_disk` | Running on Vercel, where only `/tmp` is writable and it does not survive |
+| `directory_not_writable` | `STORAGE_DIR` could not be created or written to |
+| `sqlite_unavailable` | `node:sqlite` is missing — Node older than 22.5 |
+
+`location` is a filename, never an absolute path: this is an HTTP response.
+
+---
+
+## `GET /api/audits`
+
+Everything the server has stored for **your** session, identified by the
+`uxa_session` cookie. No cookie means an empty list — it never creates a session
+just because someone looked.
+
+```json
+{
+  "audits": [
+    {
+      "id": "dd245044-5e3a-4b49-b1c0-05c2e5975b6f",
+      "url": "https://example.com/",
+      "score": 70,
+      "language": "en",
+      "createdAt": "2026-08-31T22:32:56.457Z",
+      "shareId": null
+    }
+  ],
+  "storage": "sqlite",
+  "count": 1
+}
+```
+
+Metadata only, up to 50 entries. The full report is fetched by its share link.
+
+### What is stored, and what is not
+
+**Stored:** the audited URL, the report (including the evidence snippets, which
+come from a public page), and a random anonymous session id.
+
+**Not stored:** the downloaded HTML, the screenshot, IP addresses, user agents —
+nothing that identifies a person. The `audits` table has exactly eight columns
+and none of them is a request header.
+
+---
+
+## `DELETE /api/audits`
+
+Deletes everything stored for this session and clears the session cookie. Any
+share links belonging to it stop resolving immediately.
+
+```json
+{ "deleted": 1 }
+```
+
+This is the erasure path, and it needs no account because there is no account.
+
+---
+
+## `POST /api/audits/{id}/share`
+
+Publishes a stored audit at its own URL. Requires the session cookie, and only
+works on an audit belonging to that session.
+
+```json
+{ "shareId": "96c49e548e38498ba41e76", "path": "/a/96c49e548e38498ba41e76" }
+```
+
+The share identifier is generated separately from the internal id, so a shared
+link reveals nothing that can be used elsewhere. Calling it twice returns the
+same link. An audit that is not yours returns `404`, not `403` — confirming it
+exists would already leak something.
+
+Shared pages are served with `robots: noindex`: an unlisted link is not the same
+as published content.
+
+## `DELETE /api/audits/{id}/share`
+
+Revokes the link. The audit itself is untouched; the URL starts returning `404`.
+
+```json
+{ "shared": false }
+```
+
+---
+
+## `GET /api/keys` · `POST /api/keys` · `DELETE /api/keys/{id}`
+
+API key management. Gated by `ADMIN_TOKEN`.
+
+```bash
+curl -X POST https://your-deploy/api/keys   -H "Authorization: Bearer $ADMIN_TOKEN"   -H 'Content-Type: application/json'   -d '{"label":"ci-pipeline","quota":500}'
+```
+
+```json
+{
+  "key": { "id": "41a41d55-…", "label": "ci-pipeline", "quota": 500, "used": 0, "remaining": 500 },
+  "secret": "uxa_7b05e099333e4a9fb67e7c36d111abb453f9f1ed",
+  "warning": "Store this now. It is hashed and cannot be recovered."
+}
+```
+
+`secret` appears exactly once, in this response. Only its SHA-256 is stored, so
+a stolen database yields no usable keys, and `GET /api/keys` never returns the
+hash either. Lose the secret and the fix is to revoke and create another.
+
+`DELETE /api/keys/{id}` marks a key revoked rather than deleting the row: the
+row is the record that the key existed and how much it was used.
+
+| Field | Notes |
+|---|---|
+| `label` | Required, trimmed to 60 chars |
+| `quota` | Optional, defaults to 100, capped at 10 000 |
+
+---
+
+## `GET /api/errors` · `DELETE /api/errors`
+
+The last 100 server errors, newest first. Gated by `ADMIN_TOKEN`.
+
+```json
+{ "errors": [{ "id": "…", "event": "audit_unexpected_error", "message": "…", "createdAt": "…" }], "count": 1, "storage": "sqlite" }
+```
+
+Deliberately small: a bounded ring, no aggregation, no alerting. It is not a
+replacement for an error-tracking service — it answers "what broke on the
+deployment?" without needing shell access or an account anywhere.
+
+It stores the error message and nothing about the request: no URL, no IP, no
+headers. An error store is exactly where personal data ends up leaking by
+accident.
+
+`?limit=` caps the number returned (max 100). `DELETE` empties it.

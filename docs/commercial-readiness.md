@@ -44,15 +44,15 @@ Without these you cannot legally or safely take money.
 
 | Item | Why it blocks launch | Notes for implementation |
 |---|---|---|
-| **Authentication** | Usage limits must attach to a person, not an IP. The current in-memory per-IP limiter is trivially bypassed and resets on every deploy. | Email + OAuth. The app has no session concept today; every route handler needs a session lookup. |
-| **Database** | Audits, users, subscriptions, and usage counters must survive a deploy. Today history lives in the visitor's `localStorage` and vanishes with their cache. | Postgres. Minimum tables: `users`, `audits`, `audit_findings`, `usage_periods`, `subscriptions`. |
+| **Authentication** | Usage limits must attach to a person, not an IP. The per-IP limiter is trivially bypassed and resets on every deploy. | Email + OAuth. There is an anonymous session cookie and hashed API keys with quotas today, which is the mechanism — what is missing is an identity behind it: no email, no password, no recovery. |
+| **Database** | Users, subscriptions and usage counters must survive a deploy, and must be shared across instances. Audits already persist to SQLite where a disk exists — but not on serverless, and not across instances. | Postgres. The `audits` and `api_keys` tables port over almost unchanged; what is missing is `users`, `usage_periods` and `subscriptions`. |
 | **Usage limits per account** | The cost control that makes the free tier safe. | Counter keyed on `(user_id, billing_period)`, checked before the AI layer runs — the deterministic layer can stay unlimited because it is free. |
 | **Billing + payment provider** | Obvious. | Stripe Checkout + Customer Portal. Do not build card handling; redirect to Stripe. |
 | **Subscription webhooks** | Without them a cancelled card keeps its paid access forever. | `checkout.session.completed`, `customer.subscription.updated`, `.deleted`, `invoice.payment_failed`. Must be idempotent — Stripe retries. |
 | **Transactional email** | Password reset and receipts are not optional. | Resend or Postmark. |
 | **Terms of Service + Privacy Policy** | Required to take payment and to process third-party URLs. | Must state what is stored, for how long, and that audited pages are fetched by our servers. |
-| **Data deletion** | GDPR/CCPA. Also simply correct. | Account deletion must cascade to audits. |
-| **Error tracking** | You cannot support a paid product you cannot debug. | Sentry. |
+| **Data deletion** | GDPR/CCPA. Also simply correct. | `DELETE /api/audits` already erases everything held for a session and revokes its share links. With accounts it must cascade from the user instead. |
+| **Error tracking** | You cannot support a paid product you cannot debug. | `/api/errors` keeps the last 100 errors, which is enough to diagnose but has no alerting, grouping, or stack traces. Sentry or equivalent. |
 | **Shared rate limiting** | The current limiter is per-instance and in-memory; on serverless each instance keeps its own count. | Upstash Redis or equivalent. |
 
 ### IMPORTANT (weeks 1–8 after launch, not blocking)
@@ -153,7 +153,7 @@ Layered, cheapest check first:
 2. **SSRF guard** (implemented) — blocks using the service as an internal-network probe.
 3. **Size cap + content-type check** (implemented) — bounds the work per request.
 4. **Per-IP rate limit** (implemented, in-memory) — must move to a shared store.
-5. **Per-account quota** (not implemented) — the real control; only the AI layer needs metering.
+5. **Per-key quota** (implemented) — hashed API keys with a 24 h quota window and revocation. This is the real control; what is missing is an *account* behind the key, not the metering.
 6. **Bounded model output** (implemented) — `MAX_TOKENS` plus explicit word limits in the prompt; cost per audit cannot run away.
 7. **Deterministic fallback** (implemented) — if the AI layer fails, the user still gets a complete audit, so a failed call never produces a refund request.
 

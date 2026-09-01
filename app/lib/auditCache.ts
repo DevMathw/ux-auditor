@@ -1,20 +1,16 @@
 import { createHash } from "node:crypto";
+import { getStore } from "./storage";
 import type { AuditChecks, AuditResult } from "./types";
 
 /**
  * Caché por hash del contenido, no por URL: si la página no ha cambiado, la
  * auditoría es la misma y no hay que volver a pagar la llamada al modelo.
  * Es también la defensa contra el usuario que pulsa "analizar" diez veces.
+ *
+ * La entrada vive en el store, así que con SQLite sobrevive a un reinicio y en
+ * memoria se comporta como antes. La expulsión y el TTL los aplica el store.
  */
 const TTL_MS = 30 * 60_000;
-const MAX_ENTRIES = 200;
-
-interface CacheEntry {
-  audit: AuditResult;
-  expiresAt: number;
-}
-
-const cache = new Map<string, CacheEntry>();
 
 export function auditCacheKey(
   html: string,
@@ -33,23 +29,19 @@ export function auditCacheKey(
     .digest("hex");
 }
 
-export function getCachedAudit(key: string): AuditResult | null {
-  const entry = cache.get(key);
-  if (!entry) return null;
-  if (entry.expiresAt <= Date.now()) {
-    cache.delete(key);
+export async function getCachedAudit(key: string): Promise<AuditResult | null> {
+  // Un fallo de la caché nunca debe impedir una auditoría: se trata como fallo.
+  try {
+    return (await getStore()).cache.get(key);
+  } catch {
     return null;
   }
-  // Refresca la posición para que el LRU expulse lo menos usado.
-  cache.delete(key);
-  cache.set(key, entry);
-  return entry.audit;
 }
 
-export function setCachedAudit(key: string, audit: AuditResult): void {
-  if (cache.size >= MAX_ENTRIES) {
-    const oldest = cache.keys().next().value;
-    if (oldest) cache.delete(oldest);
+export async function setCachedAudit(key: string, audit: AuditResult): Promise<void> {
+  try {
+    (await getStore()).cache.set(key, audit, TTL_MS);
+  } catch {
+    // Guardar en caché es una optimización; no vale perder la respuesta por ella.
   }
-  cache.set(key, { audit, expiresAt: Date.now() + TTL_MS });
 }

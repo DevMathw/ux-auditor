@@ -41,3 +41,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Base de datos local del store (SQLite). Es estado, no código.
+/.data/

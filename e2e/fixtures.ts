@@ -16,7 +16,13 @@ export interface AuditFixtureOptions {
   cached?: boolean;
   /** Retraso antes de responder, para poder observar el estado de carga. */
   delayMs?: number;
+  /** null simula un despliegue sin almacenamiento: no se puede compartir. */
+  auditId?: string | null;
 }
+
+/** Id fijo, para poder construir la ruta de compartir en los tests. */
+export const FIXTURE_AUDIT_ID = "dd245044-5e3a-4b49-b1c0-05c2e5975b6f";
+export const FIXTURE_SHARE_ID = "96c49e548e38498ba41e76";
 
 export function auditFixture(options: AuditFixtureOptions = {}) {
   const {
@@ -116,7 +122,27 @@ export function auditFixture(options: AuditFixtureOptions = {}) {
     },
     analyzedUrl: "https://example.com/",
     cached: options.cached ?? false,
+    auditId: options.auditId === undefined ? FIXTURE_AUDIT_ID : options.auditId,
   };
+}
+
+/** Intercepta el endpoint de compartir. Devuelve los métodos recibidos. */
+export async function stubShare(page: Page) {
+  const methods: string[] = [];
+  await page.route(`**/api/audits/${FIXTURE_AUDIT_ID}/share`, async (route) => {
+    const method = route.request().method();
+    methods.push(method);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(
+        method === "DELETE"
+          ? { shared: false }
+          : { shareId: FIXTURE_SHARE_ID, path: `/a/${FIXTURE_SHARE_ID}` }
+      ),
+    });
+  });
+  return methods;
 }
 
 /** Intercepta /api/audit y responde con el fixture. Devuelve las URLs pedidas. */

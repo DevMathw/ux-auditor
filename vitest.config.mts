@@ -13,6 +13,11 @@ export default defineConfig({
     // Los .spec.ts de e2e los corre Playwright, no vitest.
     exclude: ["e2e/**", "node_modules/**"],
     setupFiles: ["tests/setup/dom.ts"],
+    env: {
+      // Los tests nunca tocan disco: si no, dejarían una base de datos en el
+      // repositorio y su resultado dependería de lo que quedase de la anterior.
+      STORAGE_DRIVER: "memory",
+    },
     // Los tests de componentes con jsdom + userEvent son sensibles al tiempo y
     // el runner de CI puede ir cargado. 5 s por defecto producía fallos
     // intermitentes; 15 s no ralentiza los que pasan.

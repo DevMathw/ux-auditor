@@ -312,7 +312,7 @@ serve zero `<main>` elements (`grep -c '<main'` returns 0).
 
 ## Test suite
 
-`npm test` — 246 tests, ~75 s, no network.
+`npm test` — 357 tests, ~85 s, no network.
 
 **Domain and infrastructure (170)** — `ssrf` 35, `rules` 30, `run-audit` 22,
 `exporters` 16, `visual-rules` 16, `audit-cache` 15, `rate-limit` 15,

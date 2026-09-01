@@ -21,6 +21,7 @@ import type { AuditChecks, AuditResult, HistoryEntry } from "../lib/types";
 const FindingsList = dynamic(() => import("./FindingsList"));
 const SummaryCards = dynamic(() => import("./SummaryCards"));
 const ExportButton = dynamic(() => import("./ExportButton"));
+const ShareButton = dynamic(() => import("./ShareButton"));
 const HistoryPanel = dynamic(() => import("./HistoryPanel"));
 const ScoreChart = dynamic(() => import("./ScoreChart"));
 const ComparePanel = dynamic(() => import("./ComparePanel"));
@@ -33,6 +34,8 @@ export default function AuditWorkspace() {
   const [audit, setAudit] = useState<AuditResult | null>(null);
   const [analyzedUrl, setAnalyzedUrl] = useState("");
   const [fromCache, setFromCache] = useState(false);
+  // null cuando el servidor no pudo guardar: entonces no hay nada que compartir.
+  const [auditId, setAuditId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [language, setLanguage] = useState<Language>("en");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -68,6 +71,7 @@ export default function AuditWorkspace() {
     setError("");
     setAnalyzedUrl(url);
     setFromCache(false);
+    setAuditId(null);
 
     try {
       const res = await fetch("/api/audit", {
@@ -91,6 +95,7 @@ export default function AuditWorkspace() {
       setAudit(result);
       setAnalyzedUrl(finalUrl);
       setFromCache(Boolean(data.cached));
+      setAuditId(typeof data.auditId === "string" ? data.auditId : null);
       setAppState("done");
 
       saveToHistory({
@@ -124,6 +129,9 @@ export default function AuditWorkspace() {
     setAudit(entry.audit);
     setAnalyzedUrl(entry.url);
     setFromCache(false);
+    // El historial vive en el navegador y no sabe el id del servidor: un
+    // informe recuperado de ahí no se puede compartir hasta volver a auditarlo.
+    setAuditId(null);
     setAppState("done");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -132,6 +140,7 @@ export default function AuditWorkspace() {
     setAppState("idle");
     setAudit(null);
     setAnalyzedUrl("");
+    setAuditId(null);
     setError("");
     setFormKey((k) => k + 1);
   };
@@ -240,6 +249,7 @@ export default function AuditWorkspace() {
           <div className="result-actions">
             <button className="rerun-btn" onClick={reset}>{t.rerun}</button>
             <ExportButton audit={audit} url={analyzedUrl} language={language} />
+            {auditId && <ShareButton auditId={auditId} language={language} />}
           </div>
 
           <FindingsList findings={audit.findings} language={language} />

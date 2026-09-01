@@ -160,7 +160,18 @@ const en = {
     "A reproducible score — the same page always scores the same",
     "A concrete fix for every issue, ranked by impact and effort",
   ],
-  emptyHint: "Try it on any public URL. Nothing is stored on our servers.",
+  emptyHint:
+    "Try it on any public URL. Reports are stored so you can share them — you can see and delete everything the server keeps.",
+
+  // Informe compartido
+  sharedReport: "Shared report",
+  sharedNoRender: "markup only — the visual rules did not run",
+  sharedRunYourOwn: "Audit your own site →",
+  share: "Share",
+  shareCopied: "Link copied",
+  shareStop: "Stop sharing",
+  shareFailed: "Could not create the link.",
+  shareUnavailable: "Sharing needs server storage, which is off in this deployment.",
 
   // Errores del servidor, por código
   errors: {
@@ -169,6 +180,9 @@ const en = {
     invalid_body: "The request was malformed. Please try again.",
     payload_too_large: "The request was too large.",
     rate_limited: "Too many audits in a short time. Please wait a moment.",
+    invalid_api_key: "That API key is not valid.",
+    revoked_api_key: "That API key has been revoked.",
+    quota_exceeded: "This API key has used up its quota for now.",
     upstream_rate_limited: "The AI service is busy right now. Try again shortly.",
     fetch_blocked: "That address can't be analyzed — only public websites are allowed.",
     fetch_unreachable: "The site couldn't be reached. Check the URL or try again later.",
@@ -320,7 +334,17 @@ const es: typeof en = {
     "Una puntuación reproducible — la misma página puntúa siempre igual",
     "Una corrección concreta para cada problema, ordenada por impacto y esfuerzo",
   ],
-  emptyHint: "Pruébalo con cualquier URL pública. No guardamos nada en nuestros servidores.",
+  emptyHint:
+    "Pruébalo con cualquier URL pública. Los informes se guardan para que puedas compartirlos — puedes ver y borrar todo lo que el servidor conserva.",
+
+  sharedReport: "Informe compartido",
+  sharedNoRender: "solo marcado — las reglas visuales no se ejecutaron",
+  sharedRunYourOwn: "Audita tu propio sitio →",
+  share: "Compartir",
+  shareCopied: "Enlace copiado",
+  shareStop: "Dejar de compartir",
+  shareFailed: "No se pudo crear el enlace.",
+  shareUnavailable: "Compartir necesita almacenamiento en servidor, y está desactivado en este despliegue.",
 
   errors: {
     invalid_url: "Eso no parece una URL válida.",
@@ -328,6 +352,9 @@ const es: typeof en = {
     invalid_body: "La petición estaba mal formada. Inténtalo de nuevo.",
     payload_too_large: "La petición era demasiado grande.",
     rate_limited: "Demasiadas auditorías en poco tiempo. Espera un momento.",
+    invalid_api_key: "Esa clave de API no es válida.",
+    revoked_api_key: "Esa clave de API ha sido revocada.",
+    quota_exceeded: "Esta clave de API ha agotado su cuota por ahora.",
     upstream_rate_limited: "El servicio de IA está saturado. Inténtalo en unos segundos.",
     fetch_blocked: "Esa dirección no se puede analizar — solo se permiten sitios públicos.",
     fetch_unreachable: "No se pudo acceder al sitio. Revisa la URL o inténtalo más tarde.",

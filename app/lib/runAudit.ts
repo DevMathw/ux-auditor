@@ -204,7 +204,7 @@ export async function runAudit(
   const visual = wantVisual ? await deps.render(page.finalUrl) : null;
 
   const cacheKey = auditCacheKey(page.html, checks, language, useAI, visual !== null);
-  const cached = getCachedAudit(cacheKey);
+  const cached = await getCachedAudit(cacheKey);
   if (cached) {
     log.info({
       event: "audit_cache_hit",
@@ -247,7 +247,7 @@ export async function runAudit(
     recordAudit({ inputTokens: 0, outputTokens: 0, hadScreenshot: false });
   }
 
-  setCachedAudit(cacheKey, audit);
+  await setCachedAudit(cacheKey, audit);
   log.info({
     event: "audit_completed",
     host: safeHost(page.finalUrl),

@@ -10,7 +10,7 @@ reviews the design.
 📡 [API docs](./docs/api.md)
 
 [![CI](https://github.com/DevMathw/ux-auditor/actions/workflows/ci.yml/badge.svg)](https://github.com/DevMathw/ux-auditor/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-246%20unit%20%2B%2014%20e2e-brightgreen)
+![Tests](https://img.shields.io/badge/tests-357%20unit%20%2B%2017%20e2e-brightgreen)
 ![Vulnerabilities](https://img.shields.io/badge/npm%20audit-0-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -59,8 +59,12 @@ Every figure above is measured, with method, in
 - **Confidence signal** — a client-rendered shell is reported as low confidence
   instead of being handed a confident score
 - **Export** to PDF, JSON (typed `AuditResult`) and Markdown
+- **Shareable reports** — publish an audit at its own URL, revoke it whenever.
+  The link carries an identifier separate from the internal id
+- **API keys** with per-key quota and revocation, stored as SHA-256 hashes. The
+  secret is shown once and never again
 - **Bilingual** EN/ES, including the report content
-- **Three optional layers** that degrade cleanly — see below
+- **Four optional layers** that degrade cleanly — see below
 - **It audits itself** — the landing shows a real audit of this app, generated
   by `npm run self-audit`, including what it finds wrong here
 - **CI integration** — [an example GitHub Action](./examples/github-action/)
@@ -90,21 +94,35 @@ Visitor → Next.js UI → /api/audit → runAudit()
                    summary + quoted observations
                                 ▼
                              Report
+                                ▼
+                   Store (SQLite, or memory)
+                 history · share links · keys
 ```
 
 Full diagrams and module layout: [`docs/architecture.md`](./docs/architecture.md).
 
-### Three layers, three failure modes
+### Four layers, four failure modes
 
 | Layer | Needs | Adds | Cost | If unavailable |
 |---|---|---|---|---|
 | **Markup rules** | nothing | 22 rules | $0.000 | cannot fail — this is the floor |
 | **Rendered rules** | a Chromium binary | 5 rules: contrast, type size, tap targets, overflow, first screen | $0.000 | skipped and excluded from the score |
 | **Interpretation** | an API key | screenshot-based design review | ~$0.016 | deterministic summary instead |
+| **Storage** | a writable directory | server-side history, shareable links, API keys, error log, a cache that survives restarts | $0.000 | in-memory: everything still works, nothing survives a restart |
+
+None of the four needs an account with an external service. Storage uses Node's
+built-in `node:sqlite`, so `npm install` adds no database driver and there is
+nothing to sign up for.
 
 `GET /api/health` reports which layers a given deployment can actually run, so
-the degradation is visible from outside rather than silent. `GET /api/usage`
-(token-gated) reports what the AI layer has cost this instance.
+the degradation is visible from outside rather than silent. Operator endpoints
+(`/api/usage`, `/api/keys`, `/api/errors`) share one `ADMIN_TOKEN` and return
+`404` when it is unset.
+
+**On Vercel the storage layer runs in memory**, because the only writable path
+there is `/tmp` — ephemeral and per-instance. A database there would look
+persistent without being persistent, so it is not opened at all; `/api/health`
+says `serverless_ephemeral_disk` rather than pretending.
 
 ---
 
@@ -116,6 +134,7 @@ the degradation is visible from outside rather than silent. `GET /api/usage`
 | Language | TypeScript, strict |
 | Styling | Tailwind CSS + CSS custom properties |
 | Parsing | node-html-parser |
+| Storage | SQLite via `node:sqlite` (built into Node 22.5+) |
 | Rendering | Playwright (`playwright-core`) |
 | AI | Claude API (`claude-sonnet-5`), structured outputs, multimodal |
 | Testing | Vitest + Testing Library + Playwright |
@@ -158,13 +177,14 @@ attack surfaces, both closed:
 npm test
 ```
 
-**246 tests, no network, under 80 seconds.**
+**357 tests, no network, under 90 seconds.**
 
-**Domain and infrastructure — 170 tests**
+**Domain and infrastructure — 272 tests**
 
 | Suite | Tests | Covers |
 |---|---|---|
 | `ssrf` | 35 | private ranges, IPv6, DNS rebinding, redirect chains |
+| `storage` | 66 | one contract run against **both** stores, plus real persistence across reopen |
 | `rules` | 30 | every markup rule, scoring properties, determinism, doc coverage |
 | `run-audit` | 22 | the full use case and every degradation path |
 | `exporters` | 16 | JSON and Markdown output |
@@ -173,8 +193,11 @@ npm test
 | `rate-limit` | 15 | windows, expiry, client identification |
 | `compare` | 13 | deltas, fixed/new classification |
 | `csp` | 8 | the nonce policy cannot silently regress |
+| `api-auth` | 15 | API-key quota and revocation, operator token, timing-safe compare |
+| `session` | 13 | anonymous cookie format, tampering, httpOnly and SameSite |
+| `storage-provider` | 8 | SQLite vs memory resolution, and that a disk failure never throws |
 
-**Components (Testing Library + jsdom) — 76 tests**
+**Components (Testing Library + jsdom) — 85 tests**
 
 | Suite | Tests | Covers |
 |---|---|---|
@@ -183,13 +206,15 @@ npm test
 | `AuditWorkspace` | 18 | idle → loading → result → error, cancellation, AbortController |
 | `HistoryPanel` | 13 | listing, load, delete, **corrupt and outdated history** |
 | `ExportButton` | 7 | JSON, Markdown, and PDF escaping under its own CSP |
+| `ShareButton` | 9 | publishing, revoking, and a clipboard denial that must not lose the link |
 
-**End-to-end (Playwright, real Chromium) — 14 tests**
+**End-to-end (Playwright, real Chromium) — 17 tests**
 
 The full journey — open, enter URL, audit, read findings, open evidence, export,
-history — plus what only a real browser can verify: that the nonce CSP does not
-block hydration, that code-split chunks load, that storage survives a reload, and
-that the PDF export actually prints. `/api/audit` is intercepted so CI needs no
+history, share — plus what only a real browser can verify: that the nonce CSP
+does not block hydration, that code-split chunks load, that storage survives a
+reload, that publishing a report works on a real click, and that the PDF export
+actually prints. `/api/audit` is intercepted so CI needs no
 network and no API key.
 
 They encode the properties the product sells: the same HTML always produces the
@@ -256,8 +281,9 @@ cp .env.example .env.local   # then add your Anthropic API key
 npm run dev
 ```
 
-Node 20.9+. The app runs without any key — you get the complete deterministic
-audit, just without the interpretation layer.
+Node 22.5+ — the storage layer uses the built-in `node:sqlite` module, which
+landed in that version. The app runs without any key or configuration: you get
+the complete deterministic audit and a SQLite database created at `.data/`.
 
 ```env
 ANTHROPIC_API_KEY=sk-ant-...          # optional; enables the AI layer
@@ -265,7 +291,9 @@ NEXT_PUBLIC_SITE_URL=https://...      # optional; canonical URLs and sitemap
 BROWSER_WS_ENDPOINT=ws://...          # optional; remote browser over CDP
 PLAYWRIGHT_EXECUTABLE_PATH=/path/...  # optional; overrides browser detection
 PLAYWRIGHT_NO_SANDBOX=1               # only where the host cannot sandbox
-USAGE_TOKEN=...                       # optional; unlocks GET /api/usage
+STORAGE_DIR=.data                     # optional; where the SQLite file lives
+STORAGE_DRIVER=memory                 # optional; forces the in-memory store
+ADMIN_TOKEN=...                       # optional; unlocks /api/usage, /api/keys, /api/errors
 ```
 
 `playwright-core` ships no browser. Locally the app finds an installed Chrome or
@@ -310,11 +338,11 @@ whole difference from a wrapper.
 
 | Not built | Why |
 |---|---|
-| Redis for cache and rate limiting | Needs a provider account. The in-memory versions are correct for one instance and documented as cost controls, not security boundaries |
-| PostgreSQL + server-side history | Same. Comparison works today on browser history; a database is the prerequisite for sharing, not for the feature itself |
-| Auth, billing, API keys | Specified in full in [`docs/commercial-readiness.md`](./docs/commercial-readiness.md). Building them before the product was worth paying for would have been the wrong order |
+| Redis | Needs a provider account. The cache lives in the store, which is SQLite when there is a disk; the rate limiter stays in-memory and is documented as a cost control, not a security boundary |
+| PostgreSQL | Needs a server to run. `node:sqlite` gives persistence, migrations and real SQL with zero dependencies and zero setup — the schema would port to Postgres if scale ever demanded it |
+| Accounts, billing | Specified in full in [`docs/commercial-readiness.md`](./docs/commercial-readiness.md). API keys and quotas exist; email, passwords and Stripe do not, because the product is not sold yet |
 | Multi-page crawl, drift monitoring | Real complexity — queues, concurrency, scheduling — answering demand that does not exist yet |
-| Sentry | Would take an account to verify. `/api/health` and structured error logging cover the gap honestly |
+| Sentry | Would take an account to verify. `/api/errors` keeps a bounded ring of recent errors, which answers "what broke?" without pretending to be an APM |
 
 ---
 
@@ -326,7 +354,12 @@ whole difference from a wrapper.
 - The `serverless` browser provider is implemented but **not verified on
   Vercel** — see [measurements.md](./docs/measurements.md#serverless-rendering)
 - Rate limiting is per-instance and in-memory
-- History lives in the browser; clearing site data loses it
+- The browser keeps its own history in `localStorage`; the server keeps its own,
+  tied to an anonymous cookie. A report loaded from browser history cannot be
+  shared until it is re-run, because the browser does not know the server's id
+- **On Vercel, storage runs in memory**, so history and share links do not
+  survive a redeploy there. Persistence needs a host with a writable disk
+- `node:sqlite` is marked experimental by Node and prints a warning on start
 
 
 ---

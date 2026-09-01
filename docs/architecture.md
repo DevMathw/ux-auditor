@@ -39,16 +39,47 @@ request still returns a complete, useful report.
 
 ---
 
-## Three layers, three failure modes
+## Four layers, four failure modes
 
 | Layer | Needs | Adds | Cost | If unavailable |
 |---|---|---|---|---|
 | **Markup rules** | nothing | 22 rules on the served HTML | $0.000 | Cannot fail — this is the floor |
 | **Rendered rules** | a Chromium binary | 5 rules: contrast, type size, tap targets, horizontal overflow, first screen | $0.000 | Rules are skipped, excluded from the score, `rendered: false` |
 | **Interpretation** | `ANTHROPIC_API_KEY` | summary + quoted design observations | ~$0.016 | Deterministic summary is generated instead, `aiEnabled: false` |
+| **Storage** | a writable directory | server history, share links, API keys, error log, a cache that survives restarts | $0.000 | Falls back to memory; everything works, nothing survives a restart |
 
 `GET /api/health` reports which layers are actually up in a given deployment,
 so the degradation is visible from outside rather than silent.
+
+The pattern is the same in all four: an optional capability, resolved at
+runtime, that reports what it resolved to. None of them requires an account with
+an external service — the storage layer uses Node's built-in `node:sqlite`
+rather than Redis or Postgres, so cloning the repository and running
+`npm install` is the whole setup.
+
+### Why the store is split into repositories
+
+`Store` exposes four narrow repositories — audits, API keys, errors, cache —
+instead of one generic key-value interface. Each has its own shape and its own
+retention rule (audits prune by age, errors are a bounded ring, cache entries
+expire by TTL), and a single `get(key)` would hide all of that behind an opaque
+blob. It also means the SQLite schema can index what each one actually queries.
+
+The contract is defined once in `app/lib/storage/types.ts` and the test suite
+runs **the same 31 tests against both implementations**, which is the only
+way the claim that they are interchangeable means anything.
+
+### Why SQLite is not opened on Vercel
+
+Vercel's runtime only allows writes to `/tmp`, which is per-instance and does
+not survive. A database there would appear to persist and then silently lose
+data between requests handled by different instances — worse than not having
+one. So the provider detects `VERCEL` and goes straight to memory, and
+`/api/health` reports `serverless_ephemeral_disk`.
+
+This is a real, stated limitation rather than a papered-over one: to get
+persistence in production the deployment needs a writable volume — a container,
+a VM, or Fly/Railway-style hosting.
 
 ---
 
@@ -100,11 +131,15 @@ Calibration anchor: `w3.org/WAI`, published by the body that writes WCAG, scores
 ```
 app/
 ├── page.tsx, scoring/page.tsx     Presentation (Server Components)
+├── a/[shareId]/page.tsx           Presentation: read-only shared report
 ├── components/                    Presentation (Client Components)
 │   └── AuditWorkspace             the only stateful shell; report UI is code-split
 ├── api/
 │   ├── audit/route.ts             HTTP: validate, rate limit, map errors to status
 │   ├── explain/route.ts           HTTP
+│   ├── audits/                    HTTP: session history, deletion, share links
+│   ├── keys/                      HTTP: API key issue, list, revoke (operator)
+│   ├── errors/                    HTTP: recent errors (operator)
 │   └── health/route.ts            HTTP: capability report
 └── lib/
     ├── runAudit.ts                Domain: the use case, dependency-injected
@@ -114,9 +149,17 @@ app/
     ├── fetchPage.ts               Infrastructure: SSRF-safe HTTP
     ├── render.ts                  Infrastructure: Playwright
     ├── browserProvider.ts         Infrastructure: which Chromium, and how
-    ├── auditCache.ts              Infrastructure: content-hash cache
+    ├── auditCache.ts              Infrastructure: content-hash cache, over the store
     ├── rateLimit.ts               Infrastructure: fixed-window limiter
-    └── usage.ts                   Infrastructure: AI cost accounting
+    ├── usage.ts                   Infrastructure: AI cost accounting
+    ├── session.ts                 Infrastructure: anonymous session cookie
+    ├── apiKeys.ts                 Infrastructure: key auth and quota
+    ├── operatorAuth.ts            Infrastructure: ADMIN_TOKEN, timing-safe
+    └── storage/                   Infrastructure: the store
+        ├── types.ts               the contract, and the privacy policy in prose
+        ├── memory.ts              in-process implementation
+        ├── sqlite.ts              node:sqlite implementation + migrations
+        └── index.ts               provider resolution; never throws
 ```
 
 `runAudit()` takes its external dependencies as an argument, so the integration

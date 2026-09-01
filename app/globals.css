@@ -386,3 +386,31 @@ h1 em { font-style: italic; color: var(--accent); }
   .tag-sev-critical { background: #3A2321; color: #F0A9A5; }
   .tag-ai { background: #2A2338; color: #C3ADE8; }
 }
+
+/* Compartir informe */
+.share-result {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.share-link {
+  min-width: 16rem;
+  max-width: 100%;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  color: var(--text);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.share-copied,
+.share-error {
+  font-size: 0.85rem;
+}
+
+.share-copied { color: var(--accent); }
+.share-error { color: var(--danger); }

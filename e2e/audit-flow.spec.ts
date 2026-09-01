@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { stubAudit, stubAuditError, stubExplain } from "./fixtures";
+import {
+  FIXTURE_SHARE_ID,
+  stubAudit,
+  stubAuditError,
+  stubExplain,
+  stubShare,
+} from "./fixtures";
 
 /**
  * El recorrido completo en un navegador real.
@@ -253,5 +259,47 @@ test.describe("capacidades del despliegue", () => {
     expect(["up", "degraded"]).toContain(body.layers.rendering.status);
     // Nunca debe filtrar la credencial, sólo si existe.
     expect(JSON.stringify(body)).not.toContain("sk-ant");
+  });
+});
+
+test.describe("compartir el informe", () => {
+  test("publica el informe y muestra el enlace", async ({ page }) => {
+    await stubAudit(page);
+    const methods = await stubShare(page);
+    await page.goto("/");
+    await lanzarAuditoria(page, "https://example.com");
+
+    // Clic real de navegador: es exactamente donde vivía el fallo del botón
+    // Cancelar, así que este flujo no puede probarse sólo en jsdom.
+    await page.getByRole("button", { name: "Share" }).click();
+
+    const link = page.locator(".share-link");
+    await expect(link).toHaveValue(new RegExp(`/a/${FIXTURE_SHARE_ID}$`));
+    expect(methods).toEqual(["POST"]);
+  });
+
+  test("dejar de compartir revoca el enlace", async ({ page }) => {
+    await stubAudit(page);
+    const methods = await stubShare(page);
+    await page.goto("/");
+    await lanzarAuditoria(page, "https://example.com");
+
+    await page.getByRole("button", { name: "Share" }).click();
+    await expect(page.locator(".share-link")).toBeVisible();
+    await page.getByRole("button", { name: "Stop sharing" }).click();
+
+    await expect(page.locator(".share-link")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Share" })).toBeVisible();
+    expect(methods).toEqual(["POST", "DELETE"]);
+  });
+
+  test("sin almacenamiento no se ofrece compartir", async ({ page }) => {
+    // auditId null es lo que devuelve un despliegue sin disco, como Vercel.
+    await stubAudit(page, { auditId: null });
+    await page.goto("/");
+    await lanzarAuditoria(page, "https://example.com");
+
+    await expect(page.getByRole("button", { name: /export|PDF/i }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Share" })).toHaveCount(0);
   });
 });

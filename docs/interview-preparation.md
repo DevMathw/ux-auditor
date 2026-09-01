@@ -1,6 +1,6 @@
 # Interview preparation
 
-Twenty-one questions this project genuinely invites, every one tied to a real
+Twenty-four questions this project genuinely invites, every one tied to a real
 decision in the code. No question here is about a feature that does not exist.
 
 For each: what the interviewer is actually probing, the answer, where the
@@ -218,19 +218,21 @@ at build time, and its absence is a normal state the provider handles.
 
 ---
 
-### 13. Your cache and rate limiter are in-memory `Map`s. Isn't that broken on serverless?
+### 13. Your rate limiter is an in-memory `Map`. Isn't that broken on serverless?
 
 **Probing:** whether you know your own limits.
 
-**Answer:** They are per-instance, yes. For the cache that is a cost
-optimisation, not correctness — a miss just means doing the work again. For the
-rate limiter it means the effective limit is `10 × instances`, so I document it
-as a cost control, not a security boundary; a real quota has to be tied to an
-account, not an IP. The fix is a shared store, and I deliberately did not build
-it: it needs a provider account, and the honest in-memory version with a
-documented limitation is better than an untested Redis integration.
+**Answer:** It is per-instance, yes, so the effective limit is `10 × instances`.
+I document it as a cost control, not a security boundary — a real quota has to
+be tied to an identity, not an IP, and that is exactly what the API keys are:
+hashed, with a 24 h quota window and revocation, stored in the same database as
+everything else. The IP limiter is only the anonymous fallback.
 
-**Evidence:** `app/lib/rateLimit.ts` · `docs/commercial-readiness.md`
+The cache used to have the same problem and no longer does: it lives in the
+store, so with SQLite it survives a restart and a warm cache is not lost on
+every deploy.
+
+**Evidence:** `app/lib/rateLimit.ts` · `app/lib/apiKeys.ts` · `app/lib/auditCache.ts`
 
 ---
 
@@ -362,11 +364,11 @@ could have caught it — and the failing path was the one every real user takes.
 
 **Answer:** Next, in order: verify the serverless browser path on a real deploy,
 because it is the one claim in the README I cannot personally confirm; then a
-shared store for cache and rate limiting.
+host with a writable disk, so the storage layer is not degraded in production.
 
-Deliberately not built: Redis, PostgreSQL, auth, billing, API keys, multi-page
-crawl and drift monitoring. Every one needs an account or answers demand that
-does not exist yet. They are specified in `docs/commercial-readiness.md` with a
+Deliberately not built: Redis, PostgreSQL, accounts, billing, multi-page crawl
+and drift monitoring. Every one needs an account, a server, or answers demand
+that does not exist yet. They are specified in `docs/commercial-readiness.md` with a
 build order — I would rather ship a smaller thing that is honestly documented
 than a larger one where half the features are stubs.
 
@@ -377,6 +379,78 @@ wanted to drive.
 
 ---
 
+## Storage and persistence
+
+### 22. Why `node:sqlite` instead of Postgres, or better-sqlite3?
+
+**Probing:** whether you pick dependencies deliberately or by habit.
+
+**Answer:** The constraint was that someone cloning the repository should get
+the whole product from `npm install`, with no account to create and nothing to
+run alongside. Postgres needs a server. `better-sqlite3` needs native
+compilation, which breaks on some machines and lengthens CI. `node:sqlite` ships
+inside Node, so it adds zero dependencies and zero setup, and it is still real
+SQL with real indexes and real migrations.
+
+**The trade-off I volunteer:** it is marked experimental and it forces Node
+22.5+, which is a genuine cost — the app prints an `ExperimentalWarning` on
+start and the engines field excludes Node 20. I documented both rather than
+hiding them. If the API changes, the blast radius is one file, `sqlite.ts`,
+because everything else talks to the `Store` interface.
+
+**Evidence:** `app/lib/storage/sqlite.ts` · `package.json` engines
+
+---
+
+### 23. How do you know your two store implementations actually behave the same?
+
+**Probing:** whether "it's an interface" is a claim or a fact.
+
+**Answer:** Because the same 31 tests run against both. The suite is a
+`describe.each` over `[memory, sqlite]`, so session isolation, share revocation,
+quota exhaustion, retention and TTL are all asserted twice, once per
+implementation. If SQLite ever returned another session's audit, the test that
+proves memory does not would fail for SQLite too.
+
+There are then a few tests only SQLite can pass — that data survives closing and
+reopening the file, which is the entire point of it existing, and that reopening
+re-runs migrations idempotently.
+
+**Evidence:** `tests/storage.test.ts`
+
+---
+
+### 24. You store people's audits. What did you decide not to store, and why?
+
+**Probing:** whether privacy was designed or bolted on.
+
+**Answer:** The `audits` table has eight columns and none of them is a request
+header. Stored: the URL, the report, a random session id. Not stored: the
+downloaded HTML, the screenshot, IP addresses, user agents. The HTML and the
+screenshot are the two heaviest and most sensitive artefacts and neither is
+needed once the report exists, so keeping them would be cost plus liability for
+nothing.
+
+The session is a random UUID in an `HttpOnly` cookie — not a login, just enough
+to answer "show me mine" and "delete mine". `DELETE /api/audits` erases the
+session's audits, revokes its share links, and clears the cookie, and it needs
+no account because there is no account.
+
+Sharing is deliberately a separate act from storing: an audit is saved
+automatically, but it stays private until someone publishes it, the link uses an
+identifier distinct from the internal id, and revoking it takes effect
+immediately.
+
+**The trade-off I volunteer:** the evidence snippets in a stored report do
+contain text from the audited page. That page is public — the SSRF guard makes
+sure of it — but it is still content the report is carrying, which is why the
+policy is written in prose at the top of `storage/types.ts` rather than left
+implicit in a schema.
+
+**Evidence:** `app/lib/storage/types.ts` · `app/api/audits/route.ts`
+
+---
+
 ## Fast recall
 
 Numbers worth knowing cold, because they will be asked:
@@ -384,7 +458,7 @@ Numbers worth knowing cold, because they will be asked:
 | Fact | Value |
 |---|---|
 | Rules | 27 — 22 markup, 5 rendered |
-| Tests | 246 unit (170 domain, 76 component) + 14 E2E. No network |
+| Tests | 357 unit (272 domain, 85 component) + 17 E2E. No network |
 | Cost per audit | ~$0.016 with AI, $0 without |
 | Screenshot cost | ~$0.001 — multimodal is nearly free |
 | Audit latency | ~28 s, up to 58 s cold |
@@ -394,7 +468,9 @@ Numbers worth knowing cold, because they will be asked:
 | CSP nonce cost | +9 ms TTFB |
 | Calibration anchor | `w3.org/WAI` scores 100/100 |
 | Download cap | 1.5 MB |
-| Rate limit | 10 audits / 5 min / IP |
+| Rate limit | 10 audits / 5 min / IP, or a key's own 24 h quota |
+| Store | SQLite via `node:sqlite`, memory where there is no disk |
+| Node required | 22.5+, for `node:sqlite` |
 
 **If you remember one sentence:** the score comes from rules, the model
 interprets, and everything else in the design follows from that.
