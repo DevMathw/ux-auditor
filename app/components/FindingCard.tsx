@@ -38,10 +38,7 @@ export default function FindingCard({
             {t.severityLabels[finding.severity]}
           </span>
           <span className="tag tag-cat">{t.categoryLabels[finding.category] ?? finding.category}</span>
-          <span
-            className={`tag ${isAI ? "tag-ai" : "tag-verified"}`}
-            title={isAI ? t.sourceAiHint : t.sourceRuleHint}
-          >
+          <span className={`tag ${isAI ? "tag-ai" : "tag-verified"}`} title={isAI ? t.sourceAiHint : t.sourceRuleHint}>
             {isAI ? `✦ ${t.sourceAi}` : `✓ ${t.sourceRule}`}
           </span>
           {finding.wcag && (
@@ -61,24 +58,13 @@ export default function FindingCard({
       </div>
 
       <div className="finding-actions">
-        <button
-          type="button"
-          className="mini-btn"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-        >
+        <button type="button" className="mini-btn" onClick={() => setOpen((v) => !v)} aria-expanded={open} >
           {open ? "▾" : "▸"} {t.evidence} · {t.howToFix}
         </button>
         <button type="button" className="mini-btn" onClick={onExplain}>
           ✦ {t.explain}
         </button>
-        <button
-          type="button"
-          className="mini-btn"
-          onClick={onToggleResolved}
-          aria-pressed={resolved}
-          style={resolved ? { background: "var(--accent-bg)", color: "var(--accent-muted)" } : undefined}
-        >
+        <button type="button" className="mini-btn" onClick={onToggleResolved} aria-pressed={resolved} style={resolved ? { background: "var(--accent-bg)", color: "var(--accent-muted)" } : undefined} >
           {resolved ? `✓ ${t.resolved}` : `○ ${t.markResolved}`}
         </button>
       </div>

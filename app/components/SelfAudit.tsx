@@ -79,12 +79,7 @@ export default function SelfAudit({ language }: Props) {
 
       {audit.summary && <p className="self-audit-summary">{audit.summary}</p>}
 
-      <button
-        type="button"
-        className="mini-btn self-audit-toggle"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-      >
+      <button type="button" className="mini-btn self-audit-toggle" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
         {open ? "▾" : "▸"} {t.selfAuditShowFindings} ({audit.findings.length})
       </button>
 

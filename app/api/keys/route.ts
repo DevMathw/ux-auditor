@@ -35,9 +35,12 @@ export async function POST(req: NextRequest) {
   if (denied) return denied;
 
   let body: unknown;
-  try {
+  try 
+  {
     body = await req.json();
-  } catch {
+  } 
+  catch 
+  {
     body = {};
   }
   const input = (body ?? {}) as Record<string, unknown>;

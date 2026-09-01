@@ -28,18 +28,24 @@ const SHARE_RE = /^[0-9a-f]{22}$/;
 
 async function load(shareId: string) {
   if (!SHARE_RE.test(shareId)) return null;
-  try {
+  try 
+  {
     return (await getStore()).audits.findByShareId(shareId);
-  } catch {
+  } 
+  catch
+  {
     // Sin almacenamiento no hay enlaces compartidos; es un 404, no un error.
     return null;
   }
 }
 
 function hostOf(url: string): string {
-  try {
+  try 
+  {
     return new URL(url).host;
-  } catch {
+  } 
+  catch 
+  {
     return url;
   }
 }
@@ -94,11 +100,7 @@ export default async function SharedReportPage(props: PageProps<"/a/[shareId]">)
         </div>
 
         <section className="score-section">
-          <ScoreRing
-            score={audit.overallScore}
-            color={getScoreColor(audit.overallScore)}
-            caption={t.outOf100}
-          />
+          <ScoreRing score={audit.overallScore} color={getScoreColor(audit.overallScore)}caption={t.outOf100} />
           <div className="score-meta">
             <h2>{t.ratings[getRating(audit.overallScore)]}</h2>
             <p className="checks-passed">

@@ -81,14 +81,7 @@ export default function FindingsList({ findings, language }: Props) {
             </h3>
             <div className="finding-stack">
               {items.map((f) => (
-                <FindingCard
-                  key={f.id}
-                  finding={f}
-                  language={language}
-                  resolved={resolved.has(f.id)}
-                  onToggleResolved={() => toggle(f.id)}
-                  onExplain={() => setExplaining(f)}
-                />
+                <FindingCard key={f.id} finding={f} language={language} resolved={resolved.has(f.id)} onToggleResolved={() => toggle(f.id)} onExplain={() => setExplaining(f)} />
               ))}
             </div>
           </section>
@@ -96,11 +89,7 @@ export default function FindingsList({ findings, language }: Props) {
       </div>
 
       {explaining && (
-        <ExplainModal
-          key={explaining.id}
-          finding={explaining}
-          language={language}
-          onClose={() => setExplaining(null)}
+        <ExplainModal key={explaining.id} finding={explaining} language={language} onClose={() => setExplaining(null)}
         />
       )}
     </>

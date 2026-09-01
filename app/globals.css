@@ -38,7 +38,7 @@ body {
 /* ── Layout ── */
 .app { max-width: 860px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
 .header { margin-bottom: 3rem; }
-.sections-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.sections-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
 @media (max-width: 600px) { .sections-grid { grid-template-columns: 1fr; } }
 
 /* ── Eyebrow ── */
@@ -228,7 +228,7 @@ h1 em { font-style: italic; color: var(--accent); }
 .ev-snippet { font-family: var(--font-mono); font-size: 11px; color: var(--muted); background: var(--surface2); padding: 3px 7px; border-radius: 4px; width: 100%; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
 .detail-fix { font-size: 13px; line-height: 1.6; color: var(--accent); }
 
-.quickwins-card { border-color: var(--warn); background: linear-gradient(var(--warn-bg), var(--surface) 60%); }
+.quickwins-card { border-color: var(--warn); background: linear-gradient(var(--warn-bg), var(--surface) 60%); margin-bottom: 1rem; }
 .quickwins-hint { font-size: 12.5px; color: var(--muted); margin-bottom: 0.75rem; }
 .quickwins-list { margin: 0 0 0 1.1rem; padding: 0; display: flex; flex-direction: column; gap: 7px; font-size: 13.5px; line-height: 1.5; }
 .quickwins-fix { color: var(--muted); }

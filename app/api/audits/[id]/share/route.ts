@@ -34,7 +34,8 @@ export async function DELETE(req: NextRequest, ctx: RouteContext<"/api/audits/[i
 
   const { id } = await ctx.params;
   const store = await getStore();
-  if (!store.audits.unshare(id, sessionId)) {
+  if (!store.audits.unshare(id, sessionId)) 
+  {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
   return NextResponse.json({ shared: false }, { headers: NO_STORE });

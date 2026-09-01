@@ -110,45 +110,18 @@ export default function ExplainModal({ finding, language, onClose }: Props) {
         zIndex: 50, padding: "1rem",
       }}
     >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="explain-modal-title"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: "var(--surface)", border: "1px solid var(--border2)",
-          borderRadius: "16px", padding: "1.5rem",
-          maxWidth: "480px", width: "100%",
-        }}
-      >
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="explain-modal-title" onClick={(e) => e.stopPropagation()}style={{ background: "var(--surface)", border: "1px solid var(--border2)", borderRadius: "16px", padding: "1.5rem", maxWidth: "480px", width: "100%", }} >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
           <div>
-            <span style={{
-              display: "inline-block", fontSize: "10px", fontFamily: "var(--font-mono)",
-              padding: "2px 8px", borderRadius: "4px", marginBottom: "6px",
-              background: `color-mix(in srgb, ${categoryColors[finding.category] ?? "var(--muted)"} 15%, transparent)`,
-              color: categoryColors[finding.category] ?? "var(--muted)",
-            }}>
+            <span style={{ display: "inline-block", fontSize: "10px", fontFamily: "var(--font-mono)", padding: "2px 8px", borderRadius: "4px", marginBottom: "6px", background: `color-mix(in srgb, ${categoryColors[finding.category] ?? "var(--muted)"} 15%, transparent)`, color: categoryColors[finding.category] ?? "var(--muted)", }}>
               {finding.category}
             </span>
-            <h3
-              id="explain-modal-title"
-              style={{ fontFamily: "var(--font-display)", fontWeight: 400, fontSize: "1.1rem" }}
-            >
+            <h3 id="explain-modal-title" style={{ fontFamily: "var(--font-display)", fontWeight: 400, fontSize: "1.1rem" }}>
               {finding.title}
             </h3>
           </div>
-          <button
-            ref={closeRef}
-            onClick={onClose}
-            aria-label={t.close}
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              color: "var(--muted)", fontSize: "20px", padding: "0 0 0 12px", lineHeight: 1,
-            }}
-          >
-            ×
+          <button ref={closeRef} onClick={onClose} aria-label={t.close} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "20px", padding: "0 0 0 12px", lineHeight: 1, }}>
+             ×
           </button>
         </div>
 
@@ -156,15 +129,7 @@ export default function ExplainModal({ finding, language, onClose }: Props) {
           {finding.description}
         </p>
 
-        <div
-          aria-live="polite"
-          aria-busy={loading}
-          style={{
-            background: "var(--bg)", borderRadius: "10px", padding: "1rem",
-            fontSize: "13.5px", lineHeight: 1.7, minHeight: "80px", color: "var(--text)",
-            whiteSpace: "pre-wrap",
-          }}
-        >
+        <div aria-live="polite" aria-busy={loading} style={{ background: "var(--bg)", borderRadius: "10px", padding: "1rem", fontSize: "13.5px", lineHeight: 1.7, minHeight: "80px", color: "var(--text)", whiteSpace: "pre-wrap", }} >
           {loading ? (
             <span style={{ color: "var(--muted)", fontFamily: "var(--font-mono)", fontSize: "12px" }}>
               {t.generating}
@@ -172,15 +137,7 @@ export default function ExplainModal({ finding, language, onClose }: Props) {
           ) : explanation}
         </div>
 
-        <button
-          onClick={onClose}
-          style={{
-            marginTop: "1rem", width: "100%", background: "var(--text)",
-            color: "var(--bg)", border: "none", borderRadius: "10px",
-            padding: "0.65rem", fontFamily: "var(--font-body)", fontSize: "14px",
-            cursor: "pointer",
-          }}
-        >
+        <button onClick={onClose} style={{ marginTop: "1rem", width: "100%", background: "var(--text)", color: "var(--bg)", border: "none", borderRadius: "10px", padding: "0.65rem", fontFamily: "var(--font-body)", fontSize: "14px", cursor: "pointer", }} >
           {t.close}
         </button>
       </div>

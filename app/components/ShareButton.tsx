@@ -66,13 +66,7 @@ export default function ShareButton({ auditId, language }: Props) {
   if (state === "shared") {
     return (
       <span className="share-result">
-        <input
-          className="share-link"
-          readOnly
-          value={url}
-          aria-label={t.share}
-          onFocus={(e) => e.currentTarget.select()}
-        />
+        <input className="share-link" readOnly value={url} aria-label={t.share} onFocus={(e) => e.currentTarget.select()}/>
         <span className="share-copied" role="status">
           {copied ? t.shareCopied : ""}
         </span>

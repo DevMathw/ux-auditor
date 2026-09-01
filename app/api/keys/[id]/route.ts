@@ -16,7 +16,8 @@ export async function DELETE(req: NextRequest, ctx: RouteContext<"/api/keys/[id]
 
   const { id } = await ctx.params;
   const store = await getStore();
-  if (!store.apiKeys.revoke(id)) {
+  if (!store.apiKeys.revoke(id)) 
+  {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
   return NextResponse.json({ revoked: true }, { headers: { "Cache-Control": "no-store" } });

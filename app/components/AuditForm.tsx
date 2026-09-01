@@ -59,17 +59,7 @@ export default function AuditForm({
         <LanguageToggle language={language} onChange={onLanguageChange} />
       </div>
       <div className="input-row">
-        <input
-          id="url-field"
-          className="url-input"
-          type="url"
-          placeholder={t.placeholder}
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          autoComplete="off"
-          spellCheck={false}
-          disabled={loading}
-        />
+        <input id="url-field" className="url-input" type="url" placeholder={t.placeholder} value={url} onChange={(e) => setUrl(e.target.value)} autoComplete="off" spellCheck={false}disabled={loading} />
         {loading ? (
           /*
            * key distinta en cada rama: sin ella React reutiliza el mismo nodo
@@ -81,12 +71,7 @@ export default function AuditForm({
             {t.cancel}
           </button>
         ) : (
-          <button
-            key="submit"
-            type="submit"
-            className="audit-btn"
-            disabled={!url.trim() || noAreaSelected}
-          >
+          <button key="submit" type="submit" className="audit-btn" disabled={!url.trim() || noAreaSelected}>
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path d="M8 1L15 8L8 15M1 8H15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -101,12 +86,7 @@ export default function AuditForm({
           ["uxClarity", t.uxClarity],
         ] as [keyof AuditChecks, string][]).map(([key, label]) => (
           <label key={key} className="option-chip">
-            <input
-              type="checkbox"
-              checked={checks[key]}
-              onChange={() => toggle(key)}
-              disabled={loading}
-            />
+            <input type="checkbox" checked={checks[key]} onChange={() => toggle(key)} disabled={loading} />
             {label}
           </label>
         ))}

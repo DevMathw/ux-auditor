@@ -159,33 +159,17 @@ export default function AuditWorkspace() {
         <p className="subtitle">{t.subtitle}</p>
       </header>
 
-      <AuditForm
-        key={formKey}
-        onSubmit={runAudit}
-        onCancel={cancelAudit}
-        loading={appState === "loading"}
-        language={language}
-        onLanguageChange={changeLanguage}
-      />
+      <AuditForm key={formKey} onSubmit={runAudit} onCancel={cancelAudit} loading={appState === "loading"} language={language} onLanguageChange={changeLanguage}/>
 
-      {appState === "error" && (
-        <div className="error-banner" role="alert">{error}</div>
-      )}
-
+      {appState === "error" && (<div className="error-banner" role="alert">{error}</div>)}
       {appState === "loading" && <LoadingState language={language} />}
-
       {appState === "idle" && (
         <>
           {history.length === 0 && <EmptyState language={language} />}
           {history.length === 0 && <SelfAudit language={language} />}
           <ComparePanel history={history} language={language} />
           <ScoreChart history={history} language={language} />
-          <HistoryPanel
-            history={history}
-            language={language}
-            onSelect={loadFromHistory}
-            onHistoryChange={refreshHistory}
-          />
+          <HistoryPanel history={history} language={language} onSelect={loadFromHistory} onHistoryChange={refreshHistory} />
         </>
       )}
 
@@ -200,11 +184,7 @@ export default function AuditWorkspace() {
           </div>
 
           <section className="score-section">
-            <ScoreRing
-              score={audit.overallScore}
-              color={getScoreColor(audit.overallScore)}
-              caption={t.outOf100}
-            />
+            <ScoreRing score={audit.overallScore} color={getScoreColor(audit.overallScore)} caption={t.outOf100} />
             <div className="score-meta">
               <h2>{t.ratings[getRating(audit.overallScore)]}</h2>
               <p className="checks-passed">
@@ -235,14 +215,10 @@ export default function AuditWorkspace() {
             </div>
           </section>
 
-          {audit.confidence === "low" && (
-            <p className="notice notice-warn" role="alert">{t.lowConfidence}</p>
-          )}
-          {audit.rendered ? (
-            <p className="notice notice-ok">{t.renderedBadge}</p>
-          ) : (
-            <p className="notice">{t.notRenderedNotice}</p>
-          )}
+          {audit.confidence === "low" && (<p className="notice notice-warn" role="alert">{t.lowConfidence}</p>)}
+          {audit.rendered 
+          ? (<p className="notice notice-ok">{t.renderedBadge}</p>) 
+          : (<p className="notice">{t.notRenderedNotice}</p>)}
           {fromCache && <p className="notice">{t.cachedNotice}</p>}
           {!audit.aiEnabled && <p className="notice">{t.aiDisabledNotice}</p>}
 
@@ -253,12 +229,7 @@ export default function AuditWorkspace() {
           </div>
 
           <FindingsList findings={audit.findings} language={language} />
-
-          <SummaryCards
-            quickWins={audit.quickWins}
-            strengths={audit.strengths}
-            language={language}
-          />
+          <SummaryCards quickWins={audit.quickWins} strengths={audit.strengths} language={language} />
         </div>
       )}
     </>

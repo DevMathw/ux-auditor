@@ -38,25 +38,12 @@ export default function ScoreChart({ history, language }: Props) {
   return (
     <div className="section-card" style={{ marginBottom: "1.25rem" }}>
       <div className="section-title">{t.chartTitle}</div>
-      <svg
-        viewBox={`0 0 ${w} ${h}`}
-        style={{ width: "100%", height: "auto", overflow: "visible" }}
-        xmlns="http://www.w3.org/2000/svg"
-        role="img"
-        aria-label={t.chartTitle}
-      >
+      <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", height: "auto", overflow: "visible" }} xmlns="http://www.w3.org/2000/svg" role="img" aria-label={t.chartTitle}>
         {/* Grid lines */}
         {[25, 50, 75, 100].map((v) => (
           <g key={v}>
-            <line
-              x1={padL} y1={toY(v)} x2={w - padR} y2={toY(v)}
-              stroke="var(--border2)" strokeWidth="0.5" strokeDasharray="3 3"
-            />
-            <text
-              x={padL - 6} y={toY(v) + 4}
-              fontSize="9" textAnchor="end"
-              fill="var(--muted)" fontFamily="var(--font-mono)"
-            >
+            <line x1={padL} y1={toY(v)} x2={w - padR} y2={toY(v)} stroke="var(--border2)" strokeWidth="0.5" strokeDasharray="3 3" />
+            <text x={padL - 6} y={toY(v) + 4} fontSize="9" textAnchor="end" fill="var(--muted)" fontFamily="var(--font-mono)" >
               {v}
             </text>
           </g>
@@ -72,18 +59,10 @@ export default function ScoreChart({ history, language }: Props) {
         {sorted.map((entry, i) => (
           <g key={entry.id}>
             <circle cx={toX(i)} cy={toY(entry.score)} r="4" fill={getScoreColor(entry.score)} />
-            <text
-              x={toX(i)} y={toY(entry.score) - 8}
-              fontSize="9" textAnchor="middle"
-              fill={getScoreColor(entry.score)} fontFamily="var(--font-mono)" fontWeight="500"
-            >
+            <text x={toX(i)} y={toY(entry.score) - 8} fontSize="9" textAnchor="middle" fill={getScoreColor(entry.score)} fontFamily="var(--font-mono)" fontWeight="500">
               {entry.score}
             </text>
-            <text
-              x={toX(i)} y={h - padB + 14}
-              fontSize="8" textAnchor="middle"
-              fill="var(--muted)" fontFamily="var(--font-mono)"
-            >
+            <text x={toX(i)} y={h - padB + 14} fontSize="8" textAnchor="middle" fill="var(--muted)" fontFamily="var(--font-mono)">
               {new Date(entry.date).toLocaleDateString(LOCALES[language], { month: "short", day: "numeric" })}
             </text>
           </g>

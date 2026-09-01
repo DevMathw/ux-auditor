@@ -39,7 +39,8 @@ export async function POST(req: NextRequest) {
   const auth = await authenticateKey(req);
   if (auth.status === "invalid") return fail("invalid_api_key", 401);
   if (auth.status === "revoked") return fail("revoked_api_key", 401);
-  if (auth.status === "quota_exceeded") {
+  if (auth.status === "quota_exceeded") 
+  {
     const retryAfter = quotaResetSeconds(auth.record);
     return NextResponse.json(
       { error: "quota_exceeded", quota: auth.record.quota, retryAfter },
@@ -47,7 +48,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (auth.status === "anonymous") {
+  if (auth.status === "anonymous") 
+  {
     const limit = rateLimit(clientKey(req), RATE_LIMIT, RATE_WINDOW_MS);
     if (!limit.ok) {
       return NextResponse.json(
@@ -58,25 +60,31 @@ export async function POST(req: NextRequest) {
   }
 
   const contentLength = Number(req.headers.get("content-length"));
-  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) 
+  {
     return fail("payload_too_large", 413);
   }
 
   let body: unknown;
-  try {
+  try 
+  {
     body = await req.json();
-  } catch {
+  } 
+  catch 
+  {
     return fail("invalid_body", 400);
   }
 
   const input = (body ?? {}) as Record<string, unknown>;
   const language = parseLanguage(input.language);
   const parsed = parseTargetUrl(input.url);
-  if (!parsed.ok) {
+  if (!parsed.ok) 
+  {
     return fail(parsed.error === "protocol" ? "invalid_protocol" : "invalid_url", 400);
   }
 
-  try {
+  try 
+  {
     const outcome = await runAudit({
       url: parsed.url,
       checks: parseChecks(input.checks),
@@ -99,7 +107,9 @@ export async function POST(req: NextRequest) {
       auditId: stored,
     });
     return isNew ? attachSession(res, sessionId) : res;
-  } catch (err) {
+  } 
+  catch (err) 
+  {
     // runAudit degrada por su cuenta ante fallos de IA o renderizado; llegar
     // aquí significa un error inesperado, que no debe exponerse al cliente.
     log.error({ event: "audit_unexpected_error", error: err });
@@ -120,7 +130,8 @@ async function persist(
   language: "en" | "es",
   audit: AuditResult
 ): Promise<string | null> {
-  try {
+  try 
+  {
     const store = await getStore();
     const record = store.audits.save({
       sessionId,
@@ -131,7 +142,9 @@ async function persist(
       audit,
     });
     return record.id;
-  } catch (err) {
+  } 
+  catch (err) 
+  {
     log.error({ event: "audit_persist_failed", error: err });
     return null;
   }
@@ -139,10 +152,13 @@ async function persist(
 
 /** El almacén de errores no debe poder provocar un error él mismo. */
 async function recordError(event: string, err: unknown): Promise<void> {
-  try {
+  try 
+  {
     const store = await getStore();
     store.errors.record(event, err instanceof Error ? err.message : String(err));
-  } catch {
+  } 
+  catch 
+  {
     // Si ni siquiera se puede registrar el error, no queda nada útil que hacer.
   }
 }
