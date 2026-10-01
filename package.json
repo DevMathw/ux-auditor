@@ -23,12 +23,12 @@
     "self-audit": "tsx scripts/self-audit.mts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.122.0",
-    "next": "^16.3.3",
+    "@anthropic-ai/sdk": "^0.128.0",
+    "next": "^16.3.6",
     "node-html-parser": "^7.1.0",
-    "playwright-core": "^1.62.1",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "playwright-core": "^1.63.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
